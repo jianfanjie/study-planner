@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学业规划 · 三轨智能仪表盘</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#008300; --s6:#eb6834;
+  --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#008300; --s6:#d95926;
+    --good-text:#0ca30c;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--page);color:var(--ink);line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding:22px 16px 70px}
+.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.hero h1{font-size:20px;font-weight:700}
+.hero .sub{font-size:12px;color:var(--ink-2);margin-top:2px}
+.countdown{text-align:right}
+.countdown .n{font-size:24px;font-weight:700;color:var(--s6)}
+.countdown .l{font-size:11px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+.card h2{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.step{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--s1);color:#fff;font-size:12px;align-items:center;justify-content:center;flex:none}
+/* uni cards */
+.uni-region{font-size:12px;color:var(--muted);margin:10px 0 6px;font-weight:600}
+.uni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.uni{border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--page);transition:border-color .15s}
+.uni:hover{border-color:var(--s1)}
+.uni.sel{border-color:var(--s1);background:color-mix(in srgb,var(--s1) 8%,transparent)}
+.uni .u-name{font-size:13px;font-weight:700}
+.uni .u-rank{font-size:11px;color:var(--muted)}
+.uni .u-req{font-size:11px;color:var(--ink-2);margin-top:3px}
+/* inputs */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+label{font-size:12px;color:var(--ink-2);display:block;margin-bottom:3px}
+select,input[type=number]{width:100%;padding:7px 9px;font-size:13px;color:var(--ink);background:var(--page);border:1px solid var(--border);border-radius:8px;font-family:inherit}
+select:focus,input:focus{outline:2px solid var(--s1);outline-offset:1px}
+.field{margin-bottom:10px}
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+button.btn{font-family:inherit;font-size:14px;font-weight:600;border-radius:9px;cursor:pointer;padding:9px 20px;border:1px solid var(--border);background:var(--page);color:var(--ink)}
+button.btn.primary{background:var(--s1);border-color:var(--s1);color:#fff}
+button.btn:hover{filter:brightness(1.06)}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+/* AI route card */
+#results{display:none}
+.ai{border:2px solid var(--s1);position:relative;overflow:hidden}
+.ai-flex{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.ai-conf{flex:none;text-align:center}
+.ai-main{flex:1;min-width:240px}
+.ai-route{font-size:26px;font-weight:800;letter-spacing:.5px}
+.ai-alt{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.ai-reason{font-size:13px;color:var(--ink-2);margin-top:8px}
+.tug{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:12px 0 4px;background:var(--grid)}
+.tug>div{height:100%}
+.tug-lab{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.tug-lab .k{display:inline-flex;align-items:center;gap:5px}
+.swatch{width:9px;height:9px;border-radius:3px;display:inline-block}
+.factor{display:inline-block;font-size:11px;border-radius:99px;padding:1px 9px;margin:4px 4px 0 0;border:1px solid var(--border);color:var(--ink-2)}
+/* visual row */
+.vrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center}
+.vcard h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--ink-2)}
+.gauge-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.prob{font-size:30px;font-weight:700;margin:10px 0 4px}
+/* subject bars */
+.bar-row{display:grid;grid-template-columns:96px 1fr 84px;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
+.bar-name{color:var(--ink-2);text-align:right;white-space:nowrap}
+.bar-track{position:relative;height:14px;background:var(--grid);border-radius:4px}
+.bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--s1)}
+.bar-target{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
+.bar-val{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar-val b{color:var(--ink)}
+.bar-legend{font-size:11px;color:var(--muted);margin-top:6px}
+/* road tabs */
+.rtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.rtabs button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--page);color:var(--ink-2)}
+.rtabs button.active{color:#fff}
+/* roadmap */
+.road{position:relative;margin:4px 0 0 6px}
+.road::before{content:"";position:absolute;left:11px;top:8px;bottom:14px;width:2px;background:var(--grid)}
+.node{position:relative;padding:0 0 16px 38px}
+.node .dot{position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:var(--surface);border:2.5px solid var(--s1);display:flex;align-items:center;justify-content:center;font-size:12px;z-index:1}
+.node.decide .dot{border-color:var(--s6)}
+.node.grad .dot{border-color:var(--s2);font-size:13px}
+.node h4{font-size:13px;font-weight:700;padding-top:2px}
+.node .tag{display:inline-block;font-size:10.5px;font-weight:600;border-radius:5px;padding:0 6px;margin-left:6px;vertical-align:1px;background:color-mix(in srgb,var(--s6) 15%,transparent);color:var(--s6)}
+.node .items{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.node .items span{display:inline-block;background:var(--page);border:1px solid var(--border);border-radius:7px;padding:2px 9px;margin:2px 6px 2px 0}
+.ms-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 10px 2px 6px;margin:4px 6px 0 0;cursor:pointer;border:1px solid var(--border);background:var(--page);color:var(--ink-2)}
+.ms-chip input{width:13px;height:13px;accent-color:var(--s2);cursor:pointer}
+.ms-chip.done{border-color:var(--s2);color:var(--good-text);background:color-mix(in srgb,var(--s2) 9%,transparent)}
+.road-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.combo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.combo{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--page)}
+.combo h4{font-size:13px;margin-bottom:6px}
+.combo-li{font-size:12.5px;color:var(--ink-2);padding:3px 0;border-bottom:1px dashed var(--grid)}
+.combo-li:last-child{border-bottom:none}
+ul.acts{list-style:none}
+ul.acts li{font-size:13px;color:var(--ink-2);padding:4px 0 4px 2px}
+ul.acts li::before{content:"→ ";color:var(--s1);font-weight:700}
+.road-prog{font-size:12px;color:var(--muted)}
+svg{max-width:100%;height:auto}
+.tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;z-index:10;color:var(--ink)}
+details.raw{margin-top:6px}
+details.raw summary{font-size:12px;color:var(--muted);cursor:pointer}
+pre.json{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:11.5px;overflow-x:auto;max-height:340px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <div>
+    <h1>学业规划 · 三轨智能仪表盘</h1>
+    <div class="sub">目标：<b id="heroUni">香港大学 HKU</b> · <span id="heroGrade"></span> · <span id="heroRoute">路线未定</span></div>
+  </div>
+  <div class="countdown"><div class="n" id="cdDays">—</div><div class="l" id="cdLabel"></div></div>
+</div>
+
+<!-- ① 目标大学 -->
+<div class="card">
+  <h2><span class="step">1</span>选择目标大学</h2>
+  <div id="uniList"></div>
+</div>
+
+<!-- ② 输入分数 -->
+<div class="card">
+  <h2><span class="step">2</span>输入当前分数</h2>
+  <div class="grid2">
+    <div>
+      <div class="grid3" style="margin-bottom:10px">
+        <div>
+          <label for="gradeLevel">今年 9 月升入</label>
+          <select id="gradeLevel">
+            <option value="G8">初二 G8</option>
+            <option value="G9" selected>初三 G9</option>
+            <option value="G10">高一 G10</option>
+            <option value="G11">高二 G11</option>
+            <option value="G12">高三 G12</option>
+          </select>
+        </div>
+        <div style="grid-column:span 2">
+          <label for="gradeSystem">校内成绩体系</label>
+          <select id="gradeSystem">
+            <option value="myp">IB / MYP（1–7 分）</option>
+            <option value="igcse">英制（A*–E 或 9–1）</option>
+            <option value="us">美制（A–F）</option>
+          </select>
+        </div>
+      </div>
+      <label style="margin-bottom:6px">各科成绩（可留空）</label>
+      <div class="subj-grid" id="subjectInputs"></div>
+    </div>
+    <div>
+      <div class="field">
+        <label for="engType">学术英语</label>
+        <div style="display:flex;gap:8px">
+          <select id="engType" style="flex:1.2">
+            <option value="none">暂无成绩</option>
+            <option value="ielts">IELTS</option>
+            <option value="toefl">TOEFL</option>
+            <option value="tofj">TOEFL Junior</option>
+          </select>
+          <input type="number" id="engScore" placeholder="分数" step="0.5" style="flex:1" disabled>
+        </div>
+      </div>
+      <label>MAP Test（RIT，可留空）</label>
+      <div class="grid3" style="margin-bottom:10px">
+        <div><label for="mapReading">Reading</label><input type="number" id="mapReading" placeholder="225"></div>
+        <div><label for="mapLang">Language</label><input type="number" id="mapLang" placeholder="222"></div>
+        <div><label for="mapMath">Math</label><input type="number" id="mapMath" placeholder="235"></div>
+      </div>
+      <div class="grid3">
+        <div>
+          <label for="pref">学科偏好</label>
+          <select id="pref"><option value="undecided">未定</option><option value="stem">偏理</option><option value="hum">偏文</option></select>
+        </div>
+        <div>
+          <label for="routeIntent">意向路线</label>
+          <select id="routeIntent"><option value="undecided">未定</option><option value="alevel">A-Level</option><option value="ib">IB</option><option value="ap">AP</option></select>
+        </div>
+        <div>
+          <label for="major">意向专业方向</label>
+          <select id="major">
+            <option value="undecided">未定（按画像推断）</option>
+            <option value="eng">工程</option>
+            <option value="cs">计算机</option>
+            <option value="bus">商科 / 经济</option>
+            <option value="med">医学 / 生化</option>
+            <option value="hum">人文 / 社科</option>
+            <option value="art">艺术 / 设计</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="btn primary" id="runBtn">生成规划 →</button>
+    <button class="btn" id="demoBtn">示例数据</button>
+  </div>
+</div>
+
+<!-- 结果 -->
+<div id="results">
+
+  <!-- AI 路线确立卡片 -->
+  <div class="card ai">
+    <h2 style="margin-bottom:14px">🎯 AI 智能路线确立</h2>
+    <div class="ai-flex">
+      <div class="ai-conf">
+        <svg id="confGauge" width="120" height="100" viewBox="0 0 120 100"></svg>
+        <div class="gauge-sub">推荐置信度</div>
+      </div>
+      <div class="ai-main">
+        <div class="ai-route" id="aiRoute">—</div>
+        <div class="ai-alt" id="aiAlt"></div>
+        <div class="ai-reason" id="aiReason"></div>
+      </div>
+    </div>
+    <div class="tug" id="tug"></div>
+    <div class="tug-lab" id="tugLab"></div>
+    <div id="factorChips"></div>
+  </div>
+
+  <!-- 选科组合推荐 -->
+  <div class="card">
+    <h2>🎓 三轨选科组合 <span id="comboMajor" style="font-weight:400;font-size:12px;color:var(--muted)"></span></h2>
+    <div class="combo-grid" id="comboGrid"></div>
+    <p class="hint" id="comboNote"></p>
+  </div>
+
+  <div class="vrow">
+    <div class="vcard">
+      <h3>目标达标度</h3>
+      <svg id="gauge" width="190" height="150" viewBox="0 0 190 150"></svg>
+      <div class="gauge-sub" id="gaugeSub"></div>
+    </div>
+    <div class="vcard">
+      <h3>五维能力 · 当前 vs 目标校要求</h3>
+      <svg id="radar" width="290" height="240" viewBox="0 0 290 240"></svg>
+    </div>
+    <div class="vcard">
+      <h3>录取概率（按当前分值）</h3>
+      <div class="prob" id="prob">—</div>
+      <div class="gauge-sub" id="probSub"></div>
+      <div class="gauge-sub" id="levelLine" style="margin-top:12px;font-size:12.5px;color:var(--ink-2)"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>科目达标进度<span style="font-weight:400;font-size:12px;color:var(--muted)">（竖线 = 目标校要求线）</span></h2>
+    <div id="subjectBars"></div>
+    <div class="bar-legend" id="barLegend"></div>
+  </div>
+
+  <!-- 顾问总评 -->
+  <div class="card">
+    <h2>📋 顾问总评</h2>
+    <p style="font-size:13px;color:var(--ink-2);line-height:1.7" id="advisorText"></p>
+    <h3 style="font-size:13px;font-weight:700;margin:12px 0 6px">近 90 天行动清单</h3>
+    <ul class="acts" id="actionList"></ul>
+  </div>
+
+  <div class="card">
+    <div class="road-head">
+      <h2 style="margin:0"><span class="step">3</span>学习路线图 · 现在 → <span id="roadUni"></span></h2>
+      <div class="road-prog">里程碑 <b id="msPct">0/8</b> 已达成（点击勾选，自动保存）</div>
+    </div>
+    <div class="rtabs" id="roadTabs"></div>
+    <div class="road" id="road"></div>
+  </div>
+
+  <details class="raw">
+    <summary>查看结构化 JSON（对接用）</summary>
+    <pre class="json" id="json"></pre>
+  </details>
+</div>
+
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+const r1=v=>Math.round(v);
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const ROUTE_COLOR={"A-Level":"--s1","IB":"--s2","AP":"--s6"};
+
+/* ---------- 目标大学库 ---------- */
+const UNIS=[
+  {id:"hku",  name:"香港大学 HKU",       region:"hk", rank:"QS 17", al:"A*AA – AAA", ib:"36 – 42", ap:"GPA 3.7+ / 5门AP 4-5分", req:87},
+  {id:"cuhk", name:"香港中文大学 CUHK",  region:"hk", rank:"QS 32", al:"AAA",        ib:"35 – 39", ap:"GPA 3.6+ / 4门AP 4+",   req:84},
+  {id:"hkust",name:"香港科技大学 HKUST", region:"hk", rank:"QS 44", al:"AAA – AAB",  ib:"34 – 38", ap:"GPA 3.6+ / 4门AP 4+",   req:83},
+  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2",  al:"A*A*A – AAA",ib:"38 – 42", ap:"5门AP 5分 + SAT 1500",  req:92},
+  {id:"oxford",  name:"牛津大学 Oxford",  region:"uk",rank:"QS 3",  al:"A*A*A – AAA",ib:"38 – 40", ap:"5门AP 5分 + SAT 1500",  req:93},
+  {id:"cambridge",name:"剑桥大学 Cambridge",region:"uk",rank:"QS 5",al:"A*A*A",     ib:"40 – 42", ap:"5门AP 5分 + SAT 1520",  req:94},
+  {id:"ucl",  name:"伦敦大学学院 UCL",   region:"uk", rank:"QS 9",  al:"A*AA – ABB", ib:"36 – 39", ap:"4-5门AP 4-5分",         req:88},
+  {id:"ivy",  name:"常春藤盟校 Ivy League", region:"us", rank:"哈佛/耶鲁/普林斯顿等 8 校", al:"A*A*A* + 顶级背景", ib:"42 – 45", ap:"GPA 4.0 / 8门AP 5分 / SAT 1550+", req:95},
+  {id:"us30", name:"美国 Top 30（综合）", region:"us", rank:"US News Top 30", al:"—", ib:"预估 40+", ap:"GPA 3.9+ / 5-8门AP 5分 / SAT 1500+", req:90},
+  {id:"toronto",name:"多伦多大学 Toronto", region:"ca", rank:"QS 25", al:"AAA – AAB", ib:"33 – 40", ap:"GPA 3.8+ / 3-4门AP 4+", req:85},
+  {id:"mcgill", name:"麦吉尔大学 McGill",  region:"ca", rank:"QS 27", al:"AAB",       ib:"34 – 38", ap:"GPA 3.8+ / AP 4+",      req:84},
+  {id:"melbourne",name:"墨尔本大学 Melbourne",region:"au",rank:"QS 13",al:"AAB – AAA",ib:"36 – 40（热门专业）",ap:"3-4门AP 4+ / SAT 1350+",req:84},
+  {id:"sydney",  name:"悉尼大学 Sydney",     region:"au",rank:"QS 18",al:"ABB – AAB", ib:"33 – 38", ap:"3门AP 4+ / SAT 1300+", req:82},
+];
+const REGION_LABEL={hk:"🇭🇰 香港（Non-JUPAS）",uk:"🇬🇧 英国（UCAS）",us:"🇺🇸 美国（Common App）",ca:"🇨🇦 加拿大（OUAC）",au:"🇦🇺 澳大利亚（直申 / ATAR 换算）"};
+let targetUni = UNIS.find(u=>u.id===LS.get("targetUni","hku")) || UNIS[0];
+
+function renderUnis(){
+  const groups={hk:[],uk:[],us:[],ca:[],au:[]};
+  for(const u of UNIS) groups[u.region].push(u);
+  $("uniList").innerHTML=Object.entries(groups).map(([rg,list])=>
+    `<div class="uni-region">${REGION_LABEL[rg]}</div>
+     <div class="uni-grid">${list.map(u=>`
+      <div class="uni ${u.id===targetUni.id?"sel":""}" data-uni="${u.id}">
+        <div class="u-name">${u.name}</div>
+        <div class="u-rank">${u.rank}</div>
+        <div class="u-req">AL ${u.al} ｜ IB ${u.ib}</div>
+        <div class="u-req">AP ${u.ap}</div>
+      </div>`).join("")}</div>`).join("");
+}
+$("uniList").addEventListener("click",e=>{
+  const el=e.target.closest(".uni"); if(!el) return;
+  targetUni=UNIS.find(u=>u.id===el.dataset.uni);
+  LS.set("targetUni",targetUni.id);
+  renderUnis();
+  $("heroUni").textContent=targetUni.name;
+  if($("results").style.display==="block") run(false);
+});
+renderUnis();
+$("heroUni").textContent=targetUni.name;
+
+/* 定线/申请倒计时（按升入年级动态计算） */
+function updateCountdown(){
+  const e=GRADE_NUM[$("gradeLevel").value]||9;
+  const y0=new Date().getFullYear();
+  let target,label;
+  if(e<=10){ const dy=y0+(10-e)+1; target=new Date(dy+"-06-30"); label=`距路线定线窗口（${dy}.06）`; }
+  else if(e===11){ target=new Date((y0+1)+"-10-15"); label=`距 G12 申请递交季（${y0+1}.10）`; }
+  else { target=new Date(y0+"-10-15"); label=`距早申递交（${y0}.10.15）`; }
+  $("cdDays").textContent=Math.max(0,Math.ceil((target-new Date())/86400000)).toLocaleString()+" 天";
+  $("cdLabel").textContent=label;
+  $("heroGrade").textContent=GRADE_LABEL[$("gradeLevel").value]||"";
+}
+
+/* ---------- 科目与换算 ---------- */
+const SUBJECTS=[
+  {key:"math",label:"数学",group:"stem",core:true},
+  {key:"engSch",label:"英语（校内）",group:"lang",core:true},
+  {key:"physics",label:"物理",group:"stem",core:true},
+  {key:"chemistry",label:"化学",group:"stem",core:true},
+  {key:"biology",label:"生物",group:"stem",core:true},
+  {key:"humanities",label:"人文（史地）",group:"hum",core:true},
+  {key:"lang2",label:"第二语言",group:"hum",core:false},
+  {key:"arts",label:"艺术 / 设计",group:"art",core:false},
+];
+const GRADE_OPTIONS={
+  myp:["7","6","5","4","3","2","1"],
+  igcse:["A*","A","B","C","D","E","9","8","7","6","5","4","3","2","1"],
+  us:["A+","A","A-","B+","B","B-","C+","C","C-","D","F"],
+};
+const GRADE_INDEX={
+  myp:{"7":95,"6":85,"5":72,"4":60,"3":48,"2":36,"1":25},
+  igcse:{"A*":95,"A":87,"B":77,"C":67,"D":57,"E":47,"9":96,"8":90,"7":84,"6":74,"5":64,"4":56,"3":48,"2":40,"1":32},
+  us:{"A+":97,"A":93,"A-":90,"B+":85,"B":80,"B-":75,"C+":70,"C":65,"C-":60,"D":52,"F":38},
+};
+const ENG_ANCHORS={
+  ielts:[[4.5,45],[5,55],[5.5,63],[6,70],[6.5,78],[7,85],[7.5,90],[8,95],[9,99]],
+  toefl:[[50,45],[60,55],[70,63],[80,70],[90,78],[100,85],[110,92],[120,99]],
+  tofj:[[650,45],[700,55],[750,62],[800,70],[850,78],[880,86],[900,93]],
+};
+function interp(anchors,x){
+  if(x<=anchors[0][0]) return anchors[0][1];
+  for(let i=1;i<anchors.length;i++){
+    if(x<=anchors[i][0]){const [x0,y0]=anchors[i-1],[x1,y1]=anchors[i];return y0+(y1-y0)*(x-x0)/(x1-x0);}
+  }
+  return anchors[anchors.length-1][1];
+}
+const MAP_NORMS={
+  G8:{reading:{m:219,sd:16.5},lang:{m:218,sd:15.5},math:{m:226,sd:18}},
+  G9:{reading:{m:221,sd:17},lang:{m:220,sd:16},math:{m:230,sd:18.5}},
+  G10:{reading:{m:222.5,sd:17.5},lang:{m:221,sd:16.5},math:{m:232.5,sd:19.5}},
+  G11:{reading:{m:223.5,sd:18},lang:{m:222,sd:17},math:{m:234,sd:20}},
+  G12:{reading:{m:223.5,sd:18},lang:{m:222,sd:17},math:{m:234,sd:20}},
+};
+const GRADE_NUM={G8:8,G9:9,G10:10,G11:11,G12:12};
+const GRADE_LABEL={G8:"9 月升初二 G8",G9:"9 月升初三 G9",G10:"9 月升高一 G10",G11:"9 月升高二 G11",G12:"9 月升高三 G12"};
+function normCdf(z){
+  const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  let p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0?1-p:p;
+}
+/* MAP 常模取当前就读年级（= 升入年级 - 1）的春季水平 */
+const mapPct=(rit,dim,g)=>{
+  const n=MAP_NORMS["G"+Math.max(8,(GRADE_NUM[g]||9)-1)][dim];
+  return Math.round(normCdf((rit-n.m)/n.sd)*100);
+};
+
+/* ---------- 输入 UI ---------- */
+function renderSubjectInputs(){
+  const sys=$("gradeSystem").value;
+  $("subjectInputs").innerHTML=SUBJECTS.map(s=>
+    `<select id="subj_${s.key}"><option value="">— ${s.label}</option>${GRADE_OPTIONS[sys].map(g=>`<option value="${g}">${s.label}：${g}</option>`).join("")}</select>`).join("");
+  document.querySelectorAll("#subjectInputs select").forEach(el=>el.addEventListener("change",saveInputs));
+}
+const INPUT_IDS=["gradeLevel","gradeSystem","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
+function saveInputs(){
+  const d={};
+  for(const id of INPUT_IDS) d[id]=$(id).value;
+  for(const s of SUBJECTS) d["subj_"+s.key]=$("subj_"+s.key).value;
+  LS.set("inputs",d);
+}
+function restoreInputs(){
+  const d=LS.get("inputs",null); if(!d) return false;
+  if(!d._v3){ /* 旧版语义：G8=升G9；迁移一次 */
+    if(d.gradeLevel==="G8")d.gradeLevel="G9"; else if(d.gradeLevel==="G9")d.gradeLevel="G10";
+    d._v3=1; LS.set("inputs",d);
+  }
+  if(d.gradeSystem){$("gradeSystem").value=d.gradeSystem;renderSubjectInputs();}
+  for(const id of INPUT_IDS) if(d[id]!=null) $(id).value=d[id];
+  for(const s of SUBJECTS) if(d["subj_"+s.key]) $("subj_"+s.key).value=d["subj_"+s.key];
+  $("engScore").disabled=$("engType").value==="none";
+  return true;
+}
+$("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();saveInputs();});
+$("engType").addEventListener("change",()=>{$("engScore").disabled=$("engType").value==="none";saveInputs();});
+for(const id of INPUT_IDS) $(id).addEventListener("change",saveInputs);
+$("gradeLevel").addEventListener("change",updateCountdown);
+renderSubjectInputs();
+const hadSaved=restoreInputs();
+updateCountdown();
+
+$("demoBtn").addEventListener("click",()=>{
+  $("gradeSystem").value="myp"; renderSubjectInputs();
+  const demo={math:"6",engSch:"5",physics:"6",chemistry:"5",biology:"5",humanities:"6",lang2:"5",arts:"6"};
+  for(const k in demo) $("subj_"+k).value=demo[k];
+  $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
+  $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
+  saveInputs();
+});
+
+/* ---------- 引擎 ---------- */
+function readInput(){
+  const sys=$("gradeSystem").value, grade=$("gradeLevel").value;
+  const subjects={};
+  for(const s of SUBJECTS){
+    const v=$("subj_"+s.key).value;
+    if(v) subjects[s.key]={raw:v,index:GRADE_INDEX[sys][v],label:s.label,group:s.group,core:s.core};
+  }
+  const engType=$("engType").value, engScore=parseFloat($("engScore").value);
+  const eng=(engType!=="none"&&!isNaN(engScore))?{type:engType,score:engScore,index:interp(ENG_ANCHORS[engType],engScore)}:null;
+  const map={};
+  for(const [id,dim] of [["mapReading","reading"],["mapLang","lang"],["mapMath","math"]]){
+    const v=parseFloat($(id).value);
+    if(!isNaN(v)) map[dim]={rit:v,pct:mapPct(v,dim,grade)};
+  }
+  return {sys,grade,subjects,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value};
+}
+
+function analyze(inp,uni){
+  const S=inp.subjects;
+  const idx=k=>S[k]?S[k].index:null;
+  const present=Object.values(S);
+  const allIdx=present.map(s=>s.index);
+  const stem=[idx("math"),idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
+  const hum=[idx("humanities"),idx("engSch"),idx("lang2")].filter(v=>v!=null);
+  const sci=[idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
+  const blend=(a,b)=>a==null&&b==null?null:b==null?a:a==null?b:a*0.7+b*0.3;
+  const mathIdx=blend(idx("math"),inp.map.math?inp.map.math.pct:null);
+  const engIdx=inp.eng?inp.eng.index:blend(idx("engSch"),inp.map.reading?inp.map.reading.pct:null);
+
+  const depth=mathIdx!=null||sci.length?clamp(mean([mathIdx,...sci].filter(v=>v!=null))+(Math.max(mathIdx||0,...(sci.length?sci:[0]))>=90?3:0),0,100):50;
+  const range=allIdx.length?Math.max(...allIdx)-Math.min(...allIdx):0;
+  const breadth=allIdx.length?clamp(mean(allIdx)-range*0.35,0,100):50;
+  const langAb=engIdx!=null?engIdx:50;
+  const writing=clamp((engIdx??55)*0.5+(idx("humanities")??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
+  const inquiry=clamp((mean(sci)??55)*0.6+(inp.map.reading?inp.map.reading.pct:(engIdx??55))*0.4,0,100);
+  const current=[depth,breadth,writing,langAb,inquiry].map(r1);
+  const overall=r1(mean(current));
+
+  const na=uni.region==="us"||uni.region==="ca";   // 北美：广度+GPA 评估模型
+  const k=uni.req/(na?90:93);
+  const reqProfile=(na?[85,92,90,90,92]:[95,72,76,90,80]).map(v=>r1(clamp(v*k,0,100)));
+
+  /* ===== 三轨判定算法 ===== */
+  const s={ "A-Level":0, "IB":0, "AP":0 };
+  const factors=[];
+  const add=(route,w,label)=>{ s[route]+=w; factors.push({route,w,label}); };
+  const sp=Math.abs(spreadOf()); function spreadOf(){const a=mean(stem),b=mean(hum);return a!=null&&b!=null?a-b:0;}
+  const spread=spreadOf();
+  if(allIdx.length>=4){
+    const mn=Math.min(...allIdx);
+    if(sp>=15) add("A-Level",2,`文理分差 ${r1(sp)} 分，偏科显著——扬长避短`);
+    else if(sp>=8){ add("A-Level",1,`文理分差 ${r1(sp)} 分，轻度偏科`); if(uni.region==="us") add("AP",1,"偏科但目标美国——AP 自由选考可扬长"); }
+    else add("IB",1,`文理分差仅 ${r1(sp)} 分，发展均衡`);
+    if(range<=18&&mn>=68) add("IB",2,`各科无短板（最低 ${r1(mn)}），扛得住六组全修`);
+    else if(mn<60) add("A-Level",2,`存在明显弱科（最低 ${r1(mn)}），IB 会被拖分`);
+    else if(range>25) add("A-Level",1,`科目分差 ${r1(range)} 分偏大`);
+  } else {
+    add("A-Level",1,"科目数据不足 4 门，暂按保守轨评估");
+  }
+  /* MAP 信号 */
+  const m3=inp.map.reading&&inp.map.lang&&inp.map.math;
+  if(m3&&inp.map.reading.rit>225&&inp.map.lang.rit>225&&inp.map.math.rit>225)
+    add("IB",2,`MAP 三项全线高位（R${inp.map.reading.rit}/L${inp.map.lang.rit}/M${inp.map.math.rit}），全人学术画像`);
+  else if(inp.map.math&&inp.map.math.pct>=90)
+    add("AP",1,`MAP 数学第 ${inp.map.math.pct} 百分位——AP 微积分/物理可提前展示硬实力`);
+  /* 英语与写作 */
+  if(engIdx!=null&&engIdx>=70) add("IB",1,"托福 80 / 雅思 6.0 已达，能应对 EE/TOK 论文量");
+  else if(engIdx!=null&&engIdx<63) add("A-Level",1,"学术英语待补，现阶段避开 IB 论文体系更稳");
+  if(writing>=70) add("IB",1,`科研写作 ${r1(writing)} 分，写作长线有优势`);
+  /* 目标地区 */
+  if(uni.region==="us"){ add("AP",2,"目标美国 Top 30——AP+GPA 是最主流打法"); add("IB",1,"IB 在美本同样高认可"); }
+  else if(uni.region==="ca"){ add("IB",1,"加拿大方向：多大/麦吉尔对 IB 预估分换算占优"); add("AP",1,"北美课程体系（AP+GPA）在 OUAC 同样通行"); }
+  else if(uni.region==="au"){ add("IB",1,"澳洲方向：IB 直接换算 ATAR，热门专业换算占优"); add("A-Level",1,"A-Level 同样直换 ATAR，路径通畅"); }
+  else add("A-Level",1,`目标${uni.region==="hk"?"港校（Non-JUPAS 对 AL 换算清晰）":"英国（UCAS 以 AL 为原生货币）"}`);
+  /* 校内体系衔接 */
+  if(inp.sys==="us") add("AP",2,"校内已是美制体系，直接衔接 AP/Honors 零成本");
+  if(inp.sys==="myp") add("IB",1,"校内 MYP 直升 DP，体系无缝");
+  if(inp.sys==="igcse") add("A-Level",1,"校内英制，IGCSE → A-Level 直通");
+  /* 自评偏好 */
+  if(inp.pref!=="undecided") add("A-Level",1,inp.pref==="stem"?"自评偏理，适合 3-4 门垂直深耕":"自评偏文，可完全砍掉弱势理科");
+
+  const pri = uni.region==="us"?{"AP":3,"IB":2,"A-Level":1}
+            : uni.region==="ca"?{"IB":3,"AP":2,"A-Level":1}
+            : uni.region==="au"?{"IB":3,"A-Level":2,"AP":1}
+            : {"A-Level":3,"IB":2,"AP":1};
+  const ranked=Object.entries(s).sort((a,b)=>b[1]-a[1] || pri[b[0]]-pri[a[0]]);
+  let route=ranked[0][0];
+  const alt=ranked[1][0];
+  const lead=ranked[0][1]-ranked[1][1];
+  let confidence=clamp(55+lead*9,55,95);
+  const INTENT={alevel:"A-Level",ib:"IB",ap:"AP"};
+  let intentNote="";
+  if(inp.routeIntent!=="undecided"){
+    const want=INTENT[inp.routeIntent];
+    if(want!==route){ intentNote=`已按你的意向锁定 ${want}（引擎数据画像更偏 ${route}，信号 ${s[route]}:${s[want]}，建议定线前复核）。`; route=want; confidence=Math.min(confidence,70); }
+    else intentNote="意向与数据画像一致。";
+  }
+  let reason=(intentNote?intentNote+" ":"")+factors.filter(f=>f.route===route).sort((a,b)=>b.w-a.w).slice(0,3).map(f=>f.label).join("；")+(lead===0?"。⚠️ 首选与备选信号持平，建议双轨观察至定线窗口":"。");
+  if((GRADE_NUM[inp.grade]||9)>=11) reason+=" ⚠️ 已过 G10 定线窗口，此推荐用于校验当前就读路线是否最优。";
+
+  /* 达标度与概率 */
+  const score=na
+    ? clamp(breadth*0.35+langAb*0.25+writing*0.2+inquiry*0.2,0,100)
+    : clamp(depth*0.55+langAb*0.2+(mathIdx??depth)*0.25,0,100);
+  const readiness=r1(clamp(score/uni.req*100,0,100));
+  const ratio=score/uni.req;
+  const [prob,probSub]=ratio>=0.97?["65–80%","已达门槛线，冲刺更高排名"]
+    :ratio>=0.88?["45–65%","接近门槛，按路线图执行可达"]
+    :ratio>=0.78?["25–45%","有差距，2 年窗口内可弥合"]
+    :["<25%","地基期，概率随里程碑达成上修"];
+  let level;
+  if(overall>=85)level="卓越梯队 Tier 1";else if(overall>=75)level="优秀梯队 Tier 2";else if(overall>=63)level="潜力梯队 Tier 3";else level="地基构筑期 Tier 4";
+
+  const gaps=[];
+  if(mathIdx!=null&&mathIdx<uni.req) gaps.push(`数学距 ${uni.name.split(" ")[0]}准入线差 ${r1(uni.req-mathIdx)} 分`);
+  if(engIdx!=null&&engIdx<78) gaps.push("学术英语未达 IELTS 6.5 / TOEFL 90 锚点");
+  if(engIdx==null) gaps.push("缺英语标化基线，需 3 个月内建立");
+  if(writing<60) gaps.push(`科研写作 ${r1(writing)} 分，距论文体系要求有距离`);
+  const strengths=[];
+  const sorted=present.slice().sort((a,b)=>b.index-a.index);
+  for(const su of sorted.slice(0,2)) if(su.index>=80) strengths.push(`${su.label}处于优势区（潜力指数 ${r1(su.index)}）`);
+  if(inp.map.math&&inp.map.math.pct>=85) strengths.push(`MAP 数学第 ${inp.map.math.pct} 百分位`);
+  if(engIdx!=null&&engIdx>=78) strengths.push("学术英语已达高阶阅读门槛");
+  if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
+
+  return {current,reqProfile,route,alt,confidence,reason,scores:s,factors,score:r1(score),readiness,prob,probSub,overall,level,gaps,strengths,spread,range,
+          mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
+}
+
+/* ---------- 仪表盘 ---------- */
+const NS="http://www.w3.org/2000/svg";
+const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+function semiGauge(svgId,pct,color,bigText,subText,r,w){
+  const svg=$(svgId); svg.innerHTML="";
+  const vb=svg.viewBox.baseVal, cx=vb.width/2, cy=vb.height-15;
+  const circ=Math.PI*r;
+  svg.appendChild(mk("path",{d:`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`,fill:"none",stroke:css("--grid"),"stroke-width":w,"stroke-linecap":"round"}));
+  svg.appendChild(mk("path",{d:`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`,fill:"none",stroke:color,"stroke-width":w,"stroke-linecap":"round","stroke-dasharray":`${circ*pct/100} ${circ}`}));
+  const num=mk("text",{x:cx,y:cy-8,"text-anchor":"middle","font-size":r>50?34:24,"font-weight":700,fill:css("--ink")});
+  num.textContent=bigText; svg.appendChild(num);
+  if(subText){
+    const lab=mk("text",{x:cx,y:cy+12,"text-anchor":"middle","font-size":11,fill:css("--muted")});
+    lab.textContent=subText; svg.appendChild(lab);
+  }
+}
+/* ---------- 雷达 ---------- */
+const DIMS=["学术深度","知识广度","科研写作","语言能力","探究能力"];
+function drawRadar(current,req){
+  const svg=$("radar"); svg.innerHTML="";
+  const cx=145,cy=124,R=86,N=5;
+  const ang=i=>-Math.PI/2+i*2*Math.PI/N;
+  const pt=(i,v)=>[cx+Math.cos(ang(i))*R*v/100,cy+Math.sin(ang(i))*R*v/100];
+  const poly=vals=>vals.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(",")).join(" ");
+  for(const lv of [25,50,75,100]) svg.appendChild(mk("polygon",{points:poly(Array(N).fill(lv)),fill:"none",stroke:css("--grid"),"stroke-width":1}));
+  for(let i=0;i<N;i++){
+    const [x,y]=pt(i,100);
+    svg.appendChild(mk("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:css("--grid"),"stroke-width":1}));
+    const [lx,ly]=pt(i,127);
+    const t=mk("text",{x:lx,y:ly,"text-anchor":"middle","dominant-baseline":"middle",fill:css("--ink-2"),"font-size":11,"font-weight":600});
+    t.textContent=DIMS[i]; svg.appendChild(t);
+  }
+  svg.appendChild(mk("polygon",{points:poly(req),fill:"none",stroke:css("--s2"),"stroke-width":2,"stroke-dasharray":"5 4"}));
+  svg.appendChild(mk("polygon",{points:poly(current),fill:css("--s1"),"fill-opacity":.16,stroke:css("--s1"),"stroke-width":2}));
+  const tip=$("tooltip");
+  current.forEach((v,i)=>{
+    const [x,y]=pt(i,v);
+    svg.appendChild(mk("circle",{cx:x,cy:y,r:4,fill:css("--s1"),stroke:css("--surface"),"stroke-width":2}));
+    const hit=mk("circle",{cx:x,cy:y,r:13,fill:"transparent"});
+    hit.addEventListener("mousemove",e=>{
+      tip.style.display="block";tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY-10)+"px";
+      tip.innerHTML=`<b>${DIMS[i]}</b><br>当前 ${v} · 要求 ${req[i]}`;
+    });
+    hit.addEventListener("mouseleave",()=>tip.style.display="none");
+    svg.appendChild(hit);
+  });
+  const l1=mk("rect",{x:52,y:228,width:10,height:10,rx:3,fill:css("--s1")});
+  const t1=mk("text",{x:66,y:237,"font-size":11,fill:css("--ink-2")}); t1.textContent="当前";
+  const l2=mk("line",{x1:110,y1:233,x2:126,y2:233,stroke:css("--s2"),"stroke-width":2,"stroke-dasharray":"5 4"});
+  const t2=mk("text",{x:130,y:237,"font-size":11,fill:css("--ink-2")}); t2.textContent="目标校要求";
+  svg.append(l1,t1,l2,t2);
+}
+/* ---------- 科目条 ---------- */
+function drawBars(inp,uni){
+  const rows=[];
+  for(const s of SUBJECTS){
+    const d=inp.subjects[s.key]; if(!d) continue;
+    const target=s.core?uni.req:75;
+    const ok=d.index>=target;
+    rows.push(`<div class="bar-row">
+      <div class="bar-name">${s.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${d.index}%"></div><div class="bar-target" style="left:${target}%"></div></div>
+      <div class="bar-val"><b>${r1(d.index)}</b> / ${target} ${ok?"✓":"差"+r1(target-d.index)}</div>
+    </div>`);
+  }
+  $("subjectBars").innerHTML=rows.join("")||'<p class="hint">未输入校内成绩</p>';
+  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数；核心科目要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，非核心科目 75。`;
+}
+
+/* ---------- 里程碑 ---------- */
+const MILESTONES={
+  M1:{name:"数学地基",pass:"IGCSE 真题 ≥75%"},
+  M2:{name:"科学探究",pass:"Lab Report ≥16/24"},
+  M3:{name:"英语锚点",pass:"TOEFL 80 / IELTS 6.0"},
+  M4:{name:"选科评估",pass:"输出偏好报告"},
+  M5:{name:"研究写作",pass:"1500 字 B+ 级"},
+  M6:{name:"词汇量",pass:"≥10,000"},
+  M7:{name:"定线大考",pass:"5A* / PP 6 / AP 首考 4+"},
+  M8:{name:"预测分",pass:"A*A*A / IB 40+ / SAT 1500"},
+};
+const msChip=id=>{
+  const done=!!LS.get("milestones",{})[id];
+  const m=MILESTONES[id];
+  return `<label class="ms-chip ${done?"done":""}"><input type="checkbox" data-ms="${id}" ${done?"checked":""}>${id} ${m.name} · ${m.pass}</label>`;
+};
+function updateMsProgress(){
+  const done=LS.get("milestones",{});
+  $("msPct").textContent=`${Object.keys(MILESTONES).filter(k=>done[k]).length}/8`;
+}
+document.addEventListener("change",e=>{
+  const cb=e.target.closest("input[data-ms]"); if(!cb) return;
+  const done=LS.get("milestones",{});
+  if(cb.checked) done[cb.dataset.ms]=true; else delete done[cb.dataset.ms];
+  LS.set("milestones",done);
+  cb.closest(".ms-chip").classList.toggle("done",cb.checked);
+  updateMsProgress();
+});
+
+/* ---------- 专业方向 → 选科组合库 ---------- */
+const MAJORS={undecided:"未定",eng:"工程",cs:"计算机",bus:"商科 / 经济",med:"医学 / 生化",hum:"人文 / 社科",art:"艺术 / 设计"};
+const COMBO={
+  eng:{al:["Mathematics","Further Mathematics","Physics","Economics（第 4 门备选）"],
+       ib:["HL：Math AA · Physics · Chemistry","SL：English · 二语 · Economics"],
+       ap:["Calculus BC","Physics C（力学+电磁）","Chemistry","Statistics"],
+       comp:["AMC → AIME","BPhO / 物理碗","iGEM（可选）"],
+       note:"帝国理工/剑桥工程普遍要求 Math+Physics 双 A*；IB 必须选 HL Math AA 方向。"},
+  cs:{al:["Mathematics","Further Mathematics","Computer Science / Physics","Economics 备选"],
+      ib:["HL：Math AA · Computer Science · Physics","SL：English · 二语 · Econ"],
+      ap:["Calculus BC","Computer Science A","Physics C","Statistics"],
+      comp:["AMC → AIME","USACO 晋级线","开源项目 / Kaggle"],
+      note:"牛剑 CS 需 MAT/STEP 高分；美国 CS 竞争极烈，需科研或开源项目背书。"},
+  bus:{al:["Mathematics","Economics","Further Maths / History","第 4 门自由配置"],
+       ib:["HL：Math AA/AI · Economics · English","SL：二语 · 科学 · 人文"],
+       ap:["Calculus BC","微观 + 宏观经济学","Statistics","Psychology 备选"],
+       comp:["NEC 全美经济挑战","IEO 经济奥赛","SIC 投资挑战 / FBLA"],
+       note:"LSE / 港大商科对数学硬性要求 A*/7；文书需真实商业实践案例。"},
+  med:{al:["Chemistry","Biology","Mathematics","Physics 备选"],
+       ib:["HL：Chemistry · Biology · Math","SL：English · 二语 · 人文"],
+       ap:["Chemistry","Biology","Calculus BC","Psychology"],
+       comp:["UKChO","BBO 生物奥赛","BrainBee / iGEM"],
+       note:"英港医学院需另考 UCAT/BMAT；化学是三轨通用的硬门槛科目。"},
+  hum:{al:["History","English Literature","Economics / Geography","二语备选"],
+       ib:["HL：History · English · Economics","SL：Math AI · 二语 · 科学"],
+       ap:["World History","English Lang & Comp","Psychology","Micro/Macro Econ"],
+       comp:["John Locke 论文竞赛","Harvard MUN","NHD 历史竞赛"],
+       note:"人文方向核心竞争力 = 写作样本 + 论文竞赛奖项，尽早积累。"},
+  art:{al:["Art & Design","Mathematics","English / History","以作品集为核心"],
+       ib:["HL：Visual Arts · English · 人文","SL：Math AI · 二语 · 科学"],
+       ap:["Studio Art（2D/3D）","Art History","English Lang"],
+       comp:["Scholastic Art & Writing Awards","作品集竞赛 / 夏校驻留"],
+       note:"艺术方向录取权重约 60% 在作品集（Portfolio），需 12–18 个月打磨。"},
+};
+const inferMajor=a=> a.spread>=10?"eng" : a.spread<=-10?"hum" : "bus";
+
+/* ---------- 三轨路线图 ---------- */
+let lastA=null,lastInp=null,curTrack=null;
+function trackNodes(track,a,inp){
+  const y0=new Date().getFullYear();
+  const e=GRADE_NUM[inp.grade]||9;      // 今年 9 月升入的年级
+  const yrOf=g=>y0+(g-e);               // 各年级学年的起始年份（9 月）
+  const decY=yrOf(10)+1;                // G10 结束（定线）的 6 月
+  const uni=a.uni, us=uni.region==="us";
+  const applyStr = us?"Common App 文书 + ED/EA 递交（11 月）"
+    : uni.region==="hk"?"Non-JUPAS 递交港三所（UCAS 可同步英国）"
+    : uni.region==="ca"?"OUAC 递交（多大/麦吉尔，次年 1 月截止）"
+    : uni.region==="au"?"直申递交（墨大/悉尼，滚动录取）"
+    : "UCAS 递交（牛剑 10.15 / 常规 1 月）";
+  const T={
+    "A-Level":{
+      p0:[a.mathGap?"代数系统补强（因式分解/函数图像）":"AMC 竞赛数学启动","IGCSE 数理词汇前置 · Anki 4000→6000"],
+      p1:["双科学探究实验入门","500 字学术议论文"],
+      p2:["数学进阶 Extended 难度","IGCSE 选科规划（6–8 门，必含数理英）",a.engGap?"TOEFL 模考冲 80":"TOEFL 首考 95+"],
+      p3:["IGCSE 统考全力冲 5A* · Past Paper 错题库清零","IELTS 首考 6.5"],
+      pd:["IGCSE 出分 → 锁定 3–4 门 AS/A2 科目（如 Math/FM/Physics/Econ）"],
+      p4:["AS 阶段全 A · 垂直深耕","竞赛嵌入：AMC12 / 物理杯 / BPhO（配合牛剑 G5 面试）","IELTS 7.0（写作 6.5+）"],
+      p5:[applyStr,"预测分 A*A*A 达标"],
+      p6:["A-Level 大考 A*A*A – A*A*A* · STEP/MAT（若需）"],
+    },
+    "IB":{
+      p0:["学术英语强化（批判阅读+词汇）","探究式小课题 1 个（培养反思习惯）"],
+      p1:["MYP 科学探究 + 实验报告链","500 字论证写作"],
+      p2:["MAP 三项均衡冲 230+","MYP 各科稳 6–7 分",a.engGap?"TOEFL 冲 80 / IELTS 6.0（EE/TOK 门槛）":"TOEFL 95+ 巩固"],
+      p3:["MYP Personal Project 冲 6–7 分","确定 3 HL + 3 SL 选科组合","IELTS 首考 6.5"],
+      pd:["PP 终评 + MYP eAssessment 出分 → 注册 IB DP"],
+      p4:["DP 上半程：HL 科目 6+ · EE 选题定稿 · TOK 预研 · CAS 立项","IELTS 7.0"],
+      p5:[applyStr+"（IB 预测分 ≥40）","EE 终稿提交"],
+      p6:["IBDP 5 月大考 40+（冲 43）· EE+TOK Bonus ≥2"],
+    },
+    "AP":{
+      p0:["代数 II / 预备微积分打底","托福词汇启动（美高学术语境）"],
+      p1:["Honors 课程预备 · 科学实验基础","500 字学术写作"],
+      p2:["预备微积分完成 · 选定 G10 首批 AP（2–3 门）","托福巩固 80+"],
+      p3:["AP 首考 2–3 门（微积分 BC / 物理 1 / 心理）目标 4–5 分","SAT/ACT 首考（1350+ 基线）","GPA 保持 3.8+"],
+      pd:["AP 首考出分 → 规划高阶 AP 4 门 + SAT 刷分计划"],
+      p4:["高阶 AP 3–4 门（计算机 / 微观宏观经济 / 统计）","SAT 刷分至 1500+ / ACT 34+","科研或夏校 1 项（背景提升）"],
+      p5:[applyStr,"AP 5 分成绩单 + GPA 3.9+ 定型"],
+      p6:["AP 累计 5–8 门 5 分 · 常规轮补充材料"],
+    },
+  }[track];
+  /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
+  const SUMMER={
+    "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）","竞赛备赛：AMC12 / 物理杯"],12:["预测分冲刺复习","PS 文书初稿"]},
+    "IB":{10:["Personal Project 选题预研","学术写作预热"],11:["EE 方向预研 + HL 预习","CAS 长期项目构思"],12:["EE 终稿冲刺","PS/文书初稿"]},
+    "AP":{10:["首批 AP 预习（微积分 BC）","SAT 词汇启动"],11:["高阶 AP 预习（CS/经济）","SAT 系统刷题启动"],12:["Common App 文书初稿","SAT 最后冲分"]},
+  };
+  const P8=["学习习惯与时间管理体系搭建","英文原著阅读 · 词汇 3000→5000","数学衔接（Pre-Algebra → Algebra I）"];
+  const sum0 = e<=9 ? T.p0 : SUMMER[track][Math.min(e,12)];
+  const nodes=[];
+  nodes.push({stage:1,icon:"▶",t:`${y0} 暑假 · 现在`,items:[...sum0,...(a.gaps.length?["⚑ 当前差距："+a.gaps.slice(0,2).join("；")]:[])],ms:e<=9?["M1"]:[]});
+  if(e<=8) nodes.push({stage:1,icon:"0",t:`G8 全学年 · ${yrOf(8)}.09–${yrOf(8)+1}.06`,items:P8});
+  if(e<=9){
+    nodes.push({stage:1,icon:"1",t:`G9 Term 1 · ${yrOf(9)}.09–12`,items:T.p1,ms:["M2"]});
+    nodes.push({stage:1,icon:"2",t:`G9 Term 2–3 · ${yrOf(9)+1}.01–06`,items:[...T.p2,"选科倾向定量评估"],ms:["M3","M4"]});
+  }
+  if(e<=10){
+    nodes.push({stage:2,icon:"3",t:`G10 全学年 · ${yrOf(10)}.09–${decY}.06`,items:[...T.p3,...(e<=9?["1500 字学术报告 · 词汇量 10000"]:[])],ms:["M5","M6"]});
+    nodes.push({stage:2,cls:"decide",icon:"⚑",t:`${decY}.06 · 定线窗口`,tag:"关键决策",items:T.pd,ms:["M7"]});
+  }
+  if(e<=11) nodes.push({stage:3,icon:"4",t:`G11 · ${yrOf(11)}.09–${yrOf(11)+1}.06`,items:T.p4});
+  nodes.push({stage:3,icon:"5",t:`G12 Term 1 · ${yrOf(12)}.09–12`,items:T.p5,ms:["M8"]});
+  nodes.push({stage:3,cls:"grad",icon:"🎓",t:`${yrOf(12)+1}.05–08 · 终点`,items:[...T.p6,`目标达成 → ${uni.name}`]});
+  return nodes;
+}
+function renderRoad(track){
+  curTrack=track;
+  const color=css(ROUTE_COLOR[track]);
+  document.querySelectorAll("#roadTabs button").forEach(b=>{
+    const on=b.dataset.track===track;
+    b.classList.toggle("active",on);
+    b.style.background=on?css(ROUTE_COLOR[b.dataset.track]):"";
+    b.style.borderColor=on?css(ROUTE_COLOR[b.dataset.track]):"";
+  });
+  const nodes=trackNodes(track,lastA,lastInp);
+  $("road").innerHTML=nodes.map(n=>`
+    <div class="node ${n.cls||""}">
+      <div class="dot" style="border-color:${n.cls==="decide"?css("--s6"):n.cls==="grad"?css("--s2"):color}">${n.icon}</div>
+      <h4>${n.t}${n.tag?`<span class="tag">${n.tag}</span>`:""}</h4>
+      <div class="items">${n.items.map(i=>`<span>${i}</span>`).join("")}</div>
+      ${n.ms?`<div>${n.ms.map(msChip).join("")}</div>`:""}
+    </div>`).join("");
+  updateMsProgress();
+}
+function renderRoadTabs(a){
+  const order=[a.route,...["A-Level","IB","AP"].filter(t=>t!==a.route)];
+  $("roadTabs").innerHTML=order.map((t,i)=>
+    `<button data-track="${t}">${i===0?"🌟 AI推荐：":""}${t} 路径</button>`).join("");
+  document.querySelectorAll("#roadTabs button").forEach(b=>b.addEventListener("click",()=>renderRoad(b.dataset.track)));
+  renderRoad(a.route);
+}
+
+/* ---------- JSON ---------- */
+function trackJSON(track,a,inp){
+  const n=trackNodes(track,a,inp);
+  const mkPhase=(label,ns)=>({
+    phase:label,
+    academic_goals:ns.flatMap(x=>x.items.filter(i=>!i.startsWith("⚑")&&!i.includes("→ "+a.uni.name))),
+    standardized_tests:[],
+    competitions:[],
+  });
+  const p1=mkPhase("阶段一 · 初二至初三（地基与路线校准）",n.filter(x=>x.stage===1));
+  const p2=mkPhase("阶段二 · 初四至高一（选科与定线）",n.filter(x=>x.stage===2));
+  const p3=mkPhase("阶段三 · 高二至高三（冲刺与产出）",n.filter(x=>x.stage===3));
+  const std={"A-Level":[["IELTS 6.5 首考","2028-04"],["IELTS 7.0 终考","2029-11"]],
+             "IB":[["TOEFL/IELTS 锚点 80/6.0","2027-03"],["IELTS 7.0 终考","2029-11"]],
+             "AP":[["AP 首考 2-3 门","2028-05"],["SAT 首考 1350+","2028-06"],["SAT 1500+ 终考","2029-10"]]}[track];
+  p2.standardized_tests=std.slice(0,1).map(([t,d])=>({test:t,deadline:d}));
+  p3.standardized_tests=std.slice(1).map(([t,d])=>({test:t,deadline:d}));
+  p3.competitions=track==="A-Level"?["AMC12","物理杯","BPhO"]:track==="IB"?["John Locke 论文","NEC 经济"]:["AMC12","USACO","NEC"];
+  return [p1,p2,p3];
+}
+
+/* ---------- 主流程 ---------- */
+function run(scroll=true){
+  const inp=readInput();
+  if(!Object.keys(inp.subjects).length&&!inp.eng&&!Object.keys(inp.map).length){
+    alert("请至少输入一类数据（校内成绩 / 英语标化 / MAP）"); return;
+  }
+  const a=analyze(inp,targetUni);
+  lastA=a; lastInp=inp;
+  $("results").style.display="block";
+  updateCountdown();
+  $("heroRoute").textContent="AI 推荐 "+a.route;
+  /* AI 卡片 */
+  const rc=css(ROUTE_COLOR[a.route]);
+  document.querySelector(".ai").style.borderColor=rc;
+  semiGauge("confGauge",a.confidence,rc,a.confidence,"",44,10);
+  $("aiRoute").textContent=a.route+" 路线";
+  $("aiRoute").style.color=rc;
+  $("aiAlt").textContent=`备选路线：${a.alt}（信号 ${a.scores[a.alt]}）`;
+  $("aiReason").textContent=a.reason;
+  const tot=a.scores["A-Level"]+a.scores["IB"]+a.scores["AP"]||1;
+  $("tug").innerHTML=["A-Level","IB","AP"].map(t=>`<div style="width:${a.scores[t]/tot*100}%;background:${css(ROUTE_COLOR[t])}"></div>`).join("");
+  $("tugLab").innerHTML=["A-Level","IB","AP"].map(t=>`<span class="k"><span class="swatch" style="background:${css(ROUTE_COLOR[t])}"></span>${t} 信号 ${a.scores[t]}</span>`).join("");
+  $("factorChips").innerHTML=a.factors.map(f=>`<span class="factor" style="border-color:${css(ROUTE_COLOR[f.route])};color:${f.route==="IB"?css("--good-text"):css(ROUTE_COLOR[f.route])}">${f.route} +${f.w} · ${f.label}</span>`).join("");
+  /* 选科组合 */
+  const mk=(inp.major&&inp.major!=="undecided")?inp.major:inferMajor(a);
+  const C=COMBO[mk];
+  $("comboMajor").textContent=`意向专业：${MAJORS[mk]}${inp.major==="undecided"?"（按学科画像自动推断，可在上方指定）":""}`;
+  $("comboGrid").innerHTML=[["A-Level","al"],["IB","ib"],["AP","ap"]].map(([t,k2])=>{
+    const rec=t===a.route, col=css(ROUTE_COLOR[t]);
+    return `<div class="combo" style="${rec?`border-color:${col}`:""}">
+      <h4 style="color:${col}">${rec?"🌟 ":""}${t}${rec?"（推荐轨）":""}</h4>
+      ${C[k2].map(x=>`<div class="combo-li">${x}</div>`).join("")}
+    </div>`;}).join("");
+  $("comboNote").textContent="🏆 配套竞赛："+C.comp.join(" · ")+"　｜　"+C.note;
+  /* 顾问总评与行动清单 */
+  const acts=[];
+  if(a.mathGap) acts.push("数学：完成 2 套 IGCSE Extended 真题限时训练并建立错题库（目标 ≥85%）");
+  if(a.engGap) acts.push("英语：预约一次官方 TOEFL TestReady / IELTS 模考，锁定基线分");
+  if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
+  if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
+  if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率区间 ${a.prob}。路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  $("advisorText").textContent=advisor;
+  $("actionList").innerHTML=acts.slice(0,4).map(x=>`<li>${x}</li>`).join("");
+  /* 三视图 */
+  semiGauge("gauge",a.readiness,css("--s1"),a.readiness+"%",`当前 ${a.score} / 要求 ${targetUni.req}`,68,14);
+  $("gaugeSub").textContent=`按 ${targetUni.name.split(" ")[0]}准入线折算`;
+  drawRadar(a.current,a.reqProfile);
+  $("prob").textContent=a.prob;
+  $("probSub").textContent=a.probSub;
+  $("levelLine").textContent=`综合定位：${a.level}（指数 ${a.overall}/100）`;
+  drawBars(inp,targetUni);
+  $("roadUni").textContent=targetUni.name;
+  renderRoadTabs(a);
+  /* JSON */
+  $("json").textContent=JSON.stringify({
+    current_status_analysis:{
+      academic_level:`${a.level}（综合指数 ${a.overall}/100）`,
+      strengths:a.strengths,
+      gaps_to_target_university:a.gaps,
+    },
+    recommended_route_preference:{
+      recommended_route:a.route,
+      confidence_score:a.confidence,
+      recommendation_reason:a.reason,
+      alternative_route:a.alt,
+    },
+    subject_combination_recommendation:{
+      major:MAJORS[mk],
+      a_level:C.al, ib:C.ib, ap:C.ap,
+      competitions:C.comp, note:C.note,
+    },
+    advisor_summary:{ text:advisor, action_90_days:acts.slice(0,4) },
+    three_track_timeline:{
+      ib_path:trackJSON("IB",a,inp),
+      alevel_path:trackJSON("A-Level",a,inp),
+      ap_path:trackJSON("AP",a,inp),
+    },
+  },null,2);
+  if(scroll) $("results").scrollIntoView({behavior:"smooth"});
+}
+$("runBtn").addEventListener("click",()=>run(true));
+if(hadSaved){
+  const inp=readInput();
+  if(Object.keys(inp.subjects).length||inp.eng||Object.keys(inp.map).length) run(false);
+}
+</script>
+</body>
+</html>

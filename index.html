@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能学业规划系统 · Top30 逆推引擎</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#008300; --s6:#eb6834;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#008300; --s6:#d95926;
+    --good-text:#0ca30c;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  background:var(--page); color:var(--ink); line-height:1.6; padding:24px 16px 80px;
+}
+.wrap{max-width:1080px;margin:0 auto}
+header.top{margin-bottom:24px}
+header.top h1{font-size:22px;font-weight:700}
+header.top p{color:var(--ink-2);font-size:13px;margin-top:4px}
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:20px; margin-bottom:16px;
+}
+.card h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 .tag{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label{font-size:12px;color:var(--ink-2);display:block;margin-bottom:3px}
+select,input[type=number],input[type=text]{
+  width:100%;padding:7px 9px;font-size:13px;color:var(--ink);
+  background:var(--page);border:1px solid var(--border);border-radius:8px;
+  font-family:inherit;
+}
+select:focus,input:focus{outline:2px solid var(--s1);outline-offset:1px}
+.field{margin-bottom:10px}
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+button{
+  font-family:inherit;font-size:14px;font-weight:600;border-radius:9px;cursor:pointer;
+  padding:9px 20px;border:1px solid var(--border);background:var(--page);color:var(--ink);
+}
+button.primary{background:var(--s1);border-color:var(--s1);color:#fff}
+button:hover{filter:brightness(1.06)}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+#results{display:none}
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tile{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.tile .t-label{font-size:12px;color:var(--ink-2)}
+.tile .t-value{font-size:28px;font-weight:700;margin:2px 0}
+.tile .t-sub{font-size:12px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:99px;padding:2px 10px;border:1px solid var(--border)}
+/* chart */
+.viz{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.viz svg{max-width:100%;height:auto}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--ink-2);margin-bottom:8px;flex-wrap:wrap}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:10px;height:10px;border-radius:3px;display:inline-block}
+table.dt{border-collapse:collapse;font-size:12px;min-width:230px}
+table.dt th,table.dt td{padding:5px 10px;text-align:left;border-bottom:1px solid var(--grid)}
+table.dt th{color:var(--muted);font-weight:600}
+table.dt td.num{font-variant-numeric:tabular-nums;text-align:right}
+/* timeline */
+.phase{border-left:3px solid var(--s1);padding:2px 0 4px 16px;margin:0 0 18px 4px}
+.phase h3{font-size:14px;font-weight:700}
+.phase .p-sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+ul.tasks{list-style:none}
+ul.tasks li{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--grid);color:var(--ink-2)}
+ul.tasks li b{color:var(--ink);font-weight:600}
+ul.tasks li:last-child{border-bottom:none}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:5px;padding:0 6px;margin-right:6px}
+.pill.a{background:color-mix(in srgb,var(--s1) 14%,transparent);color:var(--s1)}
+.pill.t{background:color-mix(in srgb,var(--s6) 14%,transparent);color:var(--s6)}
+.pill.c{background:color-mix(in srgb,var(--s2) 14%,transparent);color:var(--good-text)}
+/* gap list */
+ul.gaps{list-style:none}
+ul.gaps li{font-size:13px;padding:5px 0;display:flex;gap:8px;align-items:baseline}
+ul.gaps li::before{content:"▸";color:var(--serious);font-size:12px}
+ul.gaps li.ok::before{content:"✓";color:var(--good-text)}
+pre#json{
+  background:var(--page);border:1px solid var(--border);border-radius:10px;
+  padding:14px;font-size:12px;overflow-x:auto;max-height:420px;line-height:1.5;
+}
+details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:8px}
+.tooltip{
+  position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:6px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);
+  display:none;z-index:10;color:var(--ink)
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>智能学业规划系统 · Top 30 逆推引擎</h1>
+  <p>数据输入 → 目标匹配 → 差距分析（Gap Analysis）→ 动态路径逆推（Back-mapping）｜香港国际学校生态 · A-Level / IB 双轨</p>
+</header>
+
+<!-- ============ 输入区 ============ -->
+<section class="card">
+  <h2>① 数据输入 <span class="tag">Input Schema</span></h2>
+  <div class="grid2">
+    <div>
+      <div class="field">
+        <label for="gradeLevel">当前年级</label>
+        <select id="gradeLevel">
+          <option value="G8">初二（Grade 8 / Year 9）</option>
+          <option value="G9">初三（Grade 9 / Year 10）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="gradeSystem">校内成绩体系</label>
+        <select id="gradeSystem">
+          <option value="myp">IB / MYP（1–7 分）</option>
+          <option value="igcse">英制 IGCSE / A-Level（A*–E 或 9–1）</option>
+          <option value="us">美制 / 通用（A–F）</option>
+        </select>
+      </div>
+      <label style="margin-bottom:6px">各科当前成绩（可留空）</label>
+      <div class="subj-grid" id="subjectInputs"></div>
+    </div>
+    <div>
+      <div class="field">
+        <label for="engType">学术英语测试</label>
+        <div style="display:flex;gap:8px">
+          <select id="engType" style="flex:1">
+            <option value="none">暂无成绩</option>
+            <option value="ielts">IELTS 雅思</option>
+            <option value="toefl">TOEFL 托福</option>
+            <option value="tofj">TOEFL Junior 小托福</option>
+          </select>
+          <input type="number" id="engScore" placeholder="分数" step="0.5" style="flex:1" disabled>
+        </div>
+      </div>
+      <label>MAP Test（RIT 分数，可留空）</label>
+      <div class="grid4" style="margin-bottom:10px">
+        <div><label for="mapReading">Reading</label><input type="number" id="mapReading" placeholder="如 225"></div>
+        <div><label for="mapLang">Language Usage</label><input type="number" id="mapLang" placeholder="如 222"></div>
+        <div><label for="mapMath">Math</label><input type="number" id="mapMath" placeholder="如 235"></div>
+      </div>
+      <div class="grid4">
+        <div>
+          <label for="pref">学科偏好</label>
+          <select id="pref">
+            <option value="undecided">未定</option>
+            <option value="stem">偏理</option>
+            <option value="hum">偏文</option>
+          </select>
+        </div>
+        <div>
+          <label for="routeIntent">当前意向路线</label>
+          <select id="routeIntent">
+            <option value="undecided">未定</option>
+            <option value="alevel">A-Level</option>
+            <option value="ib">IB</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="primary" id="runBtn">生成规划 →</button>
+    <button id="demoBtn">填入示例数据</button>
+  </div>
+  <p class="hint">引擎将四类输入归一化为 0–100 学术潜力指数，与 Top 30 准入线（A-Level：A*A*A–A*AA / IB：40–43）对标后逆推路径。</p>
+</section>
+
+<!-- ============ 结果区 ============ -->
+<div id="results">
+
+<section class="card">
+  <h2>② 现状定位与差距分析 <span class="tag">Gap Analysis</span></h2>
+  <div class="tiles" style="margin-bottom:14px">
+    <div class="tile">
+      <div class="t-label">综合学术定位</div>
+      <div class="t-value" id="tLevel" style="font-size:20px">—</div>
+      <div class="t-sub" id="tLevelSub"></div>
+    </div>
+    <div class="tile">
+      <div class="t-label">英国 / 香港 Top 30 当前概率</div>
+      <div class="t-value" id="tUk">—</div>
+      <div class="t-sub" id="tUkSub"></div>
+    </div>
+    <div class="tile">
+      <div class="t-label">美国 / 全球 Top 30 当前概率</div>
+      <div class="t-value" id="tUs">—</div>
+      <div class="t-sub" id="tUsSub"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div>
+      <h2 style="font-size:13px">优势项 Strengths</h2>
+      <ul class="gaps" id="strengthList"></ul>
+    </div>
+    <div>
+      <h2 style="font-size:13px">距 Top 30 的差距 Gaps</h2>
+      <ul class="gaps" id="gapList"></ul>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>③ 五维能力雷达 <span class="tag">Radar</span></h2>
+  <div class="legend" id="radarLegend"></div>
+  <div class="viz">
+    <svg id="radar" width="420" height="380" viewBox="0 0 420 380" role="img" aria-label="五维能力雷达图"></svg>
+    <table class="dt" id="radarTable"></table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>④ 路线推荐 <span class="tag">Route Engine</span></h2>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <span class="badge" id="routeBadge" style="font-size:15px;padding:6px 16px"></span>
+  </div>
+  <p style="font-size:13px;color:var(--ink-2)" id="routeReason"></p>
+</section>
+
+<section class="card">
+  <h2>⑤ 动态路径逆推 · 时间轴 <span class="tag">Back-mapping Timeline</span></h2>
+  <p class="hint" style="margin:0 0 14px">图例：<span class="pill a">学术</span>知识点与目标分　<span class="pill t">标化</span>考试出分节点　<span class="pill c">竞赛/背景</span>活动与产出</p>
+  <div id="timeline"></div>
+</section>
+
+<section class="card">
+  <h2>⑥ 系统输出 <span class="tag">JSON Schema</span></h2>
+  <details open>
+    <summary>结构化 JSON（供前端路径图渲染）　<button id="copyJson" style="font-size:12px;padding:3px 12px">复制</button></summary>
+    <pre id="json"></pre>
+  </details>
+</section>
+
+</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---------------- 科目定义 ---------------- */
+const SUBJECTS = [
+  {key:"math",     label:"数学",         group:"stem"},
+  {key:"engSch",   label:"英语（校内）",  group:"lang"},
+  {key:"physics",  label:"物理",         group:"stem"},
+  {key:"chemistry",label:"化学",         group:"stem"},
+  {key:"biology",  label:"生物",         group:"stem"},
+  {key:"humanities",label:"人文（史地）", group:"hum"},
+  {key:"lang2",    label:"第二语言",      group:"hum"},
+  {key:"arts",     label:"艺术 / 设计",   group:"art"},
+];
+
+/* 各体系成绩 → 0-100 潜力指数 */
+const GRADE_OPTIONS = {
+  myp:  ["7","6","5","4","3","2","1"],
+  igcse:["A*","A","B","C","D","E","9","8","7","6","5","4","3","2","1"],
+  us:   ["A+","A","A-","B+","B","B-","C+","C","C-","D","F"],
+};
+const GRADE_INDEX = {
+  myp:  {"7":95,"6":85,"5":72,"4":60,"3":48,"2":36,"1":25},
+  igcse:{"A*":95,"A":87,"B":77,"C":67,"D":57,"E":47,"9":96,"8":90,"7":84,"6":74,"5":64,"4":56,"3":48,"2":40,"1":32},
+  us:   {"A+":97,"A":93,"A-":90,"B+":85,"B":80,"B-":75,"C+":70,"C":65,"C-":60,"D":52,"F":38},
+};
+
+/* 学术英语 → 指数（锚点线性插值） */
+const ENG_ANCHORS = {
+  ielts:[[4.5,45],[5,55],[5.5,63],[6,70],[6.5,78],[7,85],[7.5,90],[8,95],[9,99]],
+  toefl:[[50,45],[60,55],[70,63],[80,70],[90,78],[100,85],[110,92],[120,99]],
+  tofj: [[650,45],[700,55],[750,62],[800,70],[850,78],[880,86],[900,93]],
+};
+function interp(anchors, x){
+  if(x<=anchors[0][0]) return anchors[0][1];
+  for(let i=1;i<anchors.length;i++){
+    if(x<=anchors[i][0]){
+      const [x0,y0]=anchors[i-1],[x1,y1]=anchors[i];
+      return y0+(y1-y0)*(x-x0)/(x1-x0);
+    }
+  }
+  return anchors[anchors.length-1][1];
+}
+
+/* MAP RIT → 百分位（G8/G9 常模近似：NWEA 2020 Norms） */
+const MAP_NORMS = {
+  G8:{reading:{m:219,sd:16.5}, lang:{m:218,sd:15.5}, math:{m:226,sd:18}},
+  G9:{reading:{m:221,sd:17},   lang:{m:220,sd:16},   math:{m:230,sd:18.5}},
+};
+function normCdf(z){ // Abramowitz-Stegun 近似
+  const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  let p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0 ? 1-p : p;
+}
+function mapPercentile(rit, dim, grade){
+  const n=MAP_NORMS[grade][dim];
+  return Math.round(normCdf((rit-n.m)/n.sd)*100);
+}
+
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+const r1=v=>Math.round(v);
+
+/* ---------------- 输入 UI ---------------- */
+function renderSubjectInputs(){
+  const sys=$("gradeSystem").value;
+  const wrap=$("subjectInputs"); wrap.innerHTML="";
+  for(const s of SUBJECTS){
+    const div=document.createElement("div");
+    const sel=document.createElement("select");
+    sel.id="subj_"+s.key;
+    sel.innerHTML='<option value="">— '+s.label+'</option>'+
+      GRADE_OPTIONS[sys].map(g=>`<option value="${g}">${s.label}：${g}</option>`).join("");
+    div.appendChild(sel); wrap.appendChild(div);
+  }
+}
+$("gradeSystem").addEventListener("change",renderSubjectInputs);
+$("engType").addEventListener("change",()=>{ $("engScore").disabled = $("engType").value==="none"; });
+renderSubjectInputs();
+
+$("demoBtn").addEventListener("click",()=>{
+  $("gradeSystem").value="myp"; renderSubjectInputs();
+  const demo={math:"6",engSch:"5",physics:"6",chemistry:"5",biology:"5",humanities:"6",lang2:"5",arts:"6"};
+  for(const k in demo) $("subj_"+k).value=demo[k];
+  $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
+  $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
+  $("pref").value="undecided"; $("routeIntent").value="undecided";
+});
+
+/* ---------------- 核心引擎 ---------------- */
+function readInput(){
+  const sys=$("gradeSystem").value, grade=$("gradeLevel").value;
+  const subjects={};
+  for(const s of SUBJECTS){
+    const v=$("subj_"+s.key).value;
+    if(v) subjects[s.key]={raw:v, index:GRADE_INDEX[sys][v], label:s.label, group:s.group};
+  }
+  const engType=$("engType").value;
+  const engScore=parseFloat($("engScore").value);
+  const eng = (engType!=="none" && !isNaN(engScore)) ? {type:engType, score:engScore, index:interp(ENG_ANCHORS[engType],engScore)} : null;
+  const map={};
+  for(const [id,dim] of [["mapReading","reading"],["mapLang","lang"],["mapMath","math"]]){
+    const v=parseFloat($(id).value);
+    if(!isNaN(v)) map[dim]={rit:v, pct:mapPercentile(v,dim,grade)};
+  }
+  return {sys, grade, subjects, eng, map, pref:$("pref").value, routeIntent:$("routeIntent").value};
+}
+
+function analyze(inp){
+  const S=inp.subjects;
+  const idx=k=>S[k]?S[k].index:null;
+  const present=Object.values(S);
+  const allIdx=present.map(s=>s.index);
+  const stem=[idx("math"),idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
+  const hum=[idx("humanities"),idx("engSch"),idx("lang2")].filter(v=>v!=null);
+  const sci=[idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
+
+  /* MAP 融合：校内分 70% + MAP 百分位 30% */
+  const blend=(school,pct)=> school==null&&pct==null?null : pct==null?school : school==null?pct : school*0.7+pct*0.3;
+  const mathIdx = blend(idx("math"), inp.map.math?inp.map.math.pct:null);
+  const engIdx  = inp.eng ? inp.eng.index : blend(idx("engSch"), inp.map.reading?inp.map.reading.pct:null);
+
+  /* 五维雷达 */
+  const depth   = mathIdx!=null||sci.length ? clamp(mean([mathIdx,...sci].filter(v=>v!=null))+ (Math.max(mathIdx||0,...(sci.length?sci:[0]))>=90?3:0),0,100) : 50;
+  const range   = allIdx.length?Math.max(...allIdx)-Math.min(...allIdx):0;
+  const breadth = allIdx.length ? clamp(mean(allIdx)-range*0.35,0,100) : 50;
+  const langAb  = engIdx!=null?engIdx:50;
+  const writing = clamp((engIdx??55)*0.5+(idx("humanities")??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
+  const inquiry = clamp((mean(sci)??55)*0.6+(inp.map.reading?inp.map.reading.pct:(engIdx??55))*0.4,0,100);
+  const radar={dims:["学术深度","知识广度","科研写作","语言能力","探究能力"],
+               current:[depth,breadth,writing,langAb,inquiry].map(r1)};
+
+  /* 综合定位 */
+  const overall = r1(mean(radar.current));
+  let level, levelSub;
+  if(overall>=85){level="卓越梯队 · Tier 1"; levelSub="具备冲击 Top 10 顶尖名校的基础，执行高阶拓展路径";}
+  else if(overall>=75){level="优秀梯队 · Tier 2"; levelSub="Top 30 在合理射程内，需按计划补齐短板维度";}
+  else if(overall>=63){level="潜力梯队 · Tier 3"; levelSub="与 Top 30 有可弥合差距，执行查漏补缺路径";}
+  else {level="地基构筑期 · Tier 4"; levelSub="优先夯实数学与学术英语地基，暂缓竞赛类投入";}
+
+  /* 优势与差距 */
+  const strengths=[], gaps=[];
+  const sorted=present.slice().sort((a,b)=>b.index-a.index);
+  if(sorted.length){
+    for(const s of sorted.slice(0,3)) if(s.index>=80) strengths.push(`${s.label}处于优势区（潜力指数 ${r1(s.index)}，对标 IGCSE A/A* 轨道）`);
+  }
+  if(inp.map.math && inp.map.math.pct>=90) strengths.push(`MAP 数学位于第 ${inp.map.math.pct} 百分位，具备竞赛数学开发价值`);
+  if(engIdx!=null && engIdx>=78) strengths.push(`学术英语已达阶段锚点（IELTS 6.5 / TOEFL 90 等效），可支撑高阶学术阅读`);
+  if(!strengths.length) strengths.push("暂未形成显著优势科目——本阶段目标即是通过地基铺设培育 1–2 个尖峰");
+
+  if(mathIdx!=null && mathIdx<85) gaps.push(`数学潜力指数 ${r1(mathIdx)}，距 Top 30 要求的 A* 轨道（≥85）差 ${r1(85-mathIdx)} 分——优先攻代数运算链与函数图像`);
+  if(engIdx!=null && engIdx<78) gaps.push(`学术英语指数 ${r1(engIdx)}，未达阶段锚点 IELTS 6.5 / TOEFL 90（≥78）——核心是学术词汇量与批判性阅读速度`);
+  if(engIdx==null) gaps.push("缺少学术英语数据——建议 3 个月内完成一次 TOEFL/IELTS 官方模考建立基线");
+  for(const s of sorted.filter(s=>s.index<70 && ["stem"].includes(s.group))) gaps.push(`${s.label}（指数 ${r1(s.index)}）低于高阶课程准入线，升入 IGCSE/DP 前需系统补强实验探究与概念理解`);
+  if(range>25) gaps.push(`科目间分差达 ${r1(range)} 分，若选 IB 将被弱科拖累总分——该信号利好 A-Level 定线`);
+  if(writing<60) gaps.push(`科研写作维度（${r1(writing)}）显著落后——距 IB EE / A-Level EPQ 要求，需从 800 字带引用报告起步`);
+  if(!gaps.length) gaps.push("各维度均已达标——差距主要在竞赛与科研背景的稀缺性，进入高阶拓展路径");
+
+  /* 路线推荐 */
+  const stemAvg=mean(stem), humAvg=mean(hum);
+  const spread = stemAvg!=null&&humAvg!=null ? stemAvg-humAvg : 0;
+  let route,reason;
+  const balanced = allIdx.length>=5 && range<=15 && Math.min(...allIdx)>=68;
+  if(inp.routeIntent==="alevel"){route="A-Level"; reason="用户已明确意向 A-Level。引擎复核：";}
+  else if(inp.routeIntent==="ib"){route="IB"; reason="用户已明确意向 IB。引擎复核：";}
+  else {route=null; reason="";}
+
+  let engineRoute, engineWhy;
+  if(Math.abs(spread)>=12 || (inp.pref!=="undecided" && !balanced)){
+    engineRoute="A-Level";
+    engineWhy = spread>=12
+      ? `理科均值（${r1(stemAvg)}）显著高于文科均值（${r1(humAvg)}），分差 ${r1(Math.abs(spread))} 分，垂直深度型画像适配 A-Level 砍弱科、堆 A* 的策略，主攻英国/香港方向。`
+      : spread<=-12
+      ? `文科均值（${r1(humAvg)}）显著高于理科均值（${r1(stemAvg)}），A-Level 可完全规避弱势理科，集中火力于人文经济组合。`
+      : `已呈现明确学科偏好（${inp.pref==="stem"?"偏理":"偏文"}），偏科画像下 A-Level 的容错性与重考机制更优。`;
+  } else if(balanced){
+    engineRoute="IB";
+    engineWhy=`八科分差仅 ${r1(range)} 分且无明显短板（最低 ${r1(Math.min(...allIdx))}），文理兼优画像是 IB 六组全修的理想候选，利好美国/多国混申方向。`;
+  } else {
+    engineRoute="Dual";
+    engineWhy="当前数据量或区分度不足以定线。建议维持 IGCSE 兼容轨（IGCSE 是 IBDP 的常见前置，保留最大切换权），并在初三下学期完成选科倾向定量评估后复算。";
+  }
+  if(route){
+    reason += engineRoute===route ? `数据画像与意向一致（${engineWhy}）` : `⚠️ 数据画像更指向 ${engineRoute}——${engineWhy} 建议在定线前与顾问复核。`;
+  } else { route=engineRoute; reason=engineWhy; }
+
+  /* Top30 概率 */
+  const ukScore = clamp((depth*0.55 + langAb*0.2 + (mathIdx??depth)*0.25),0,100);
+  const usScore = clamp((breadth*0.35 + langAb*0.25 + writing*0.2 + inquiry*0.2),0,100);
+  const band=v=> v>=88?["65–80%","高概率区间，目标可上探 Top 10"]
+              : v>=78?["45–65%","中高概率，按路径执行可稳固"]
+              : v>=68?["25–45%","中等概率，取决于阶段二补强效率"]
+              :       ["<25%","当前为地基期，概率将随里程碑达成动态上修"];
+  const [ukProb,ukSub]=band(ukScore), [usProb,usSub]=band(usScore);
+
+  /* 目标雷达（按路线） */
+  const target = route==="IB" ? [85,92,90,90,92] : route==="A-Level" ? [95,70,75,90,80] : [90,82,82,90,86];
+
+  /* ---------------- 时间轴逆推 ---------------- */
+  const y0=new Date().getFullYear();
+  const isG8 = inp.grade==="G8";
+  const yr=n=>`${y0+n}/${String((y0+n+1)%100).padStart(2,"0")}`;
+  const off = isG8?0:-1; // G9 学生阶段整体前移一年
+  const mathGap = mathIdx!=null&&mathIdx<85, engGap = engIdx==null||engIdx<78, highFlyer = overall>=83;
+
+  const phases=[];
+  /* 阶段一 */
+  const p1a=[];
+  if(mathGap) p1a.push({subject:"数学",knowledge_points:["代数运算链（因式分解/分式/指数）","二次函数与图像变换","初等几何证明"],target_level:"IGCSE Extended 真题 ≥85%（A* 轨道）"});
+  else p1a.push({subject:"数学（高阶拓展）",knowledge_points:["竞赛代数与数论入门","AMC 8/10 真题体系"],target_level:"AMC 8 ≥18 分 / AMC 10 进入荣誉线"});
+  if(engGap) p1a.push({subject:"学术英语",knowledge_points:["学术词汇 6000→8000（AWL 词表）","批判性阅读与文本分析","500→800 字议论文结构"],target_level:"IELTS 6.5 / TOEFL 90（阶段锚点）"});
+  else p1a.push({subject:"学术英语（拓展）",knowledge_points:["学术写作强化（论证与引用规范）","原著阅读（每月 1 本非虚构）"],target_level:"TOEFL 100+ / 词汇量 10000"});
+  p1a.push({subject:"科学",knowledge_points:["变量控制与误差分析","完整实验报告链（假设→方法→评估）"],target_level:"独立完成 Lab Report，按 IB IA 细则 ≥16/24"});
+  phases.push({
+    phase:`阶段一 · 地基校准期（${isG8?"初二下—初三":"初三"}，${yr(0)} 学年）`,
+    tone: highFlyer?"高阶拓展路径":"查漏补缺路径",
+    academic_goals:p1a,
+    standardized_tests:[
+      {test_name: engGap?"IELTS/TOEFL 官方模考":"TOEFL 正式首考", target_score: engGap?"IELTS 6.5 / TOEFL 90":"TOEFL 95+", deadline:`${y0+1}-06`},
+      ...(inp.map.math?[]:[{test_name:"MAP Test（建立自适应基线）",target_score:"Math RIT ≥235",deadline:`${y0}-12`}]),
+    ],
+    extracurricular_and_competitions: highFlyer
+      ? ["AMC 8/10 数学竞赛","John Locke Junior 组论文（若偏文）","校内 Science Fair 立项"]
+      : ["校内学科社团 1 个（深耕不铺量）","阅读打卡体系（文理各 1 条线）"],
+  });
+  /* 阶段二 */
+  const p2a=[];
+  if(route!=="IB"){
+    p2a.push({subject:"IGCSE 选科（6–8 门）",knowledge_points:["必修：Math / English / 双科学","按优势加选：Add. Math / Economics / History"],target_level:"核心科目全 A*，总数 ≥5 A*（Top 30 门槛）"});
+  }
+  if(route!=="A-Level"){
+    p2a.push({subject:"MYP / Pre-IB",knowledge_points:["Personal Project：选题→Process Journal→终稿","跨学科 IDU 项目","ATL 技能（研究/自我管理）"],target_level:"PP 6–7 分；核心科目维持 6–7 分"});
+  }
+  p2a.push({subject:"研究写作",knowledge_points:["文献检索（Google Scholar / JSTOR）","APA 引用规范","1500 字学术报告"],target_level:"按 EE 评分标准 A/B 项达 B 级以上"});
+  phases.push({
+    phase:`阶段二 · 选科与定线期（${isG8?"初四—高一":"初四"}，${yr(1+ (isG8?0:0))}–${yr(2)} 学年）`,
+    tone: route==="Dual"?"双轨并行 · 保留切换权":`${route} 预备轨`,
+    academic_goals:p2a,
+    standardized_tests:[
+      {test_name:"IELTS 正式考",target_score:"7.0（写作 ≥6.5）",deadline:`${y0+2+off}-04`},
+      {test_name:"SAT 诊断考（若美国方向）",target_score:"1350+ 基线",deadline:`${y0+2+off}-06`},
+      {test_name:"词汇量标准化测试",target_score:"≥10,000",deadline:`${y0+2+off}-03`},
+    ],
+    extracurricular_and_competitions:[
+      spread>=8?"AMC 10/12 → AIME 晋级线；物理碗（Physics Bowl）":"NEC 经济学挑战赛 / John Locke 论文竞赛",
+      "长期公益或社团领导力项目立项（贯穿至高三）",
+      "🔔 定线触发：本阶段末完成量化评估问卷 → 锁定 A-Level 或 IB",
+    ],
+  });
+  /* 阶段三 */
+  const p3a = route==="IB"
+    ? [{subject:"IB DP",knowledge_points:["3 HL + 3 SL（按专业方向配组）","EE 4000 字大论文","TOK 论文与展示","CAS 长期项目收尾"],target_level:"预测分 ≥40，冲 43+；EE+TOK Bonus ≥2"}]
+    : route==="A-Level"
+    ? [{subject:"A-Level",knowledge_points:["3–4 门 AL（如 Math / Further Math / Physics / Econ）","STEP/MAT/TMUA（数学/工程方向）"],target_level:"预测分 A*A*A – A*A*A*"}]
+    : [{subject:"A-Level 或 IB DP（按定线结果）",knowledge_points:["A-Level：3–4 门垂直深耕","IB：3HL+3SL + EE/TOK/CAS"],target_level:"A*A*A / IB 40+"}];
+  p3a.push({subject:"科研背景",knowledge_points:["与专业方向绑定的科研项目 1 项","产出：论文/作品集/竞赛奖项"],target_level:"完成可写入文书的实质性产出"});
+  phases.push({
+    phase:`阶段三 · 冲刺与背景提升期（高二—高三，${yr(3+off)}–${yr(4+off)} 学年）`,
+    tone:"最终冲刺",
+    academic_goals:p3a,
+    standardized_tests:[
+      {test_name:"SAT/ACT 最终出分（美国方向）",target_score:"SAT 1500+ / ACT 33+",deadline:`${y0+4+off}-10`},
+      {test_name:"IELTS/TOEFL 最终成绩",target_score:"IELTS 7.5 / TOEFL 105+",deadline:`${y0+4+off}-11`},
+      {test_name:"UCAS 递交（英国/香港方向）",target_score:"预测分达标",deadline:`${y0+4+off}-10（牛剑）/ ${y0+5+off}-01（常规）`},
+    ],
+    extracurricular_and_competitions:[
+      "按专业方向收口：工程→物理碗/BPhO；商科→NEC/IEO；数学→JUMP/AIME；生化→UKChO/BBO",
+      "科研项目结项 + 推荐信布局（2 学术 + 1 活动）",
+    ],
+  });
+
+  /* ---------------- JSON 输出 ---------------- */
+  const json={
+    current_status_analysis:{
+      academic_level:`${level}（综合指数 ${overall}/100）`,
+      strengths, gaps_to_top30:gaps,
+    },
+    recommended_route_preference:{ route, reason },
+    timeline_planning: phases.map(p=>({
+      phase:p.phase,
+      academic_goals:p.academic_goals,
+      standardized_tests:p.standardized_tests,
+      extracurricular_and_competitions:p.extracurricular_and_competitions.filter(x=>!x.startsWith("🔔")),
+    })),
+    top30_probability_matrix:{ uk_top30_prob:ukProb, us_top30_prob:usProb },
+  };
+
+  return {radar,target,level,levelSub,overall,strengths,gaps,route,reason,ukProb,ukSub,usProb,usSub,phases,json};
+}
+
+/* ---------------- 渲染 ---------------- */
+const C_CUR = getComputedStyle(document.documentElement).getPropertyValue("--s1").trim()||"#2a78d6";
+const C_TGT = "#008300";
+
+function renderRadar(radar,target){
+  const svg=$("radar"); svg.innerHTML="";
+  const cx=210,cy=195,R=140,N=5;
+  const ang=i=>-Math.PI/2 + i*2*Math.PI/N;
+  const pt=(i,v)=>[cx+Math.cos(ang(i))*R*v/100, cy+Math.sin(ang(i))*R*v/100];
+  const poly=vals=>vals.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(",")).join(" ");
+  const NS="http://www.w3.org/2000/svg";
+  const el=(t,attrs)=>{const e=document.createElementNS(NS,t);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;};
+  const cs=getComputedStyle(document.documentElement);
+  const gridC=cs.getPropertyValue("--grid").trim(), mutedC=cs.getPropertyValue("--muted").trim();
+  const inkC=cs.getPropertyValue("--ink-2").trim();
+  const curC=cs.getPropertyValue("--s1").trim(), tgtC=cs.getPropertyValue("--s2").trim();
+  for(const lv of [20,40,60,80,100]){
+    svg.appendChild(el("polygon",{points:poly(Array(N).fill(lv)),fill:"none",stroke:gridC,"stroke-width":1}));
+  }
+  for(let i=0;i<N;i++){
+    const [x,y]=pt(i,100);
+    svg.appendChild(el("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:gridC,"stroke-width":1}));
+    const [lx,ly]=pt(i,118);
+    const t=el("text",{x:lx,y:ly,"text-anchor":"middle","dominant-baseline":"middle",fill:inkC,"font-size":12,"font-weight":600});
+    t.textContent=radar.dims[i]; svg.appendChild(t);
+    const [vx,vy]=pt(i,132);
+    const tv=el("text",{x:vx,y:vy+2,"text-anchor":"middle",fill:mutedC,"font-size":11});
+    svg.appendChild(tv);
+  }
+  svg.appendChild(el("polygon",{points:poly(target),fill:"none",stroke:tgtC,"stroke-width":2,"stroke-dasharray":"6 4"}));
+  const cur=el("polygon",{points:poly(radar.current),fill:curC,"fill-opacity":.16,stroke:curC,"stroke-width":2});
+  svg.appendChild(cur);
+  const tip=$("tooltip");
+  radar.current.forEach((v,i)=>{
+    const [x,y]=pt(i,v);
+    const dot=el("circle",{cx:x,cy:y,r:4.5,fill:curC,stroke:"var(--surface)","stroke-width":2});
+    const hit=el("circle",{cx:x,cy:y,r:14,fill:"transparent"});
+    hit.addEventListener("mousemove",e=>{
+      tip.style.display="block";
+      tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY-10)+"px";
+      tip.innerHTML=`<b>${radar.dims[i]}</b><br>当前 ${v} · 目标 ${target[i]} · 差距 ${Math.max(0,target[i]-v)}`;
+    });
+    hit.addEventListener("mouseleave",()=>tip.style.display="none");
+    svg.appendChild(dot); svg.appendChild(hit);
+  });
+  $("radarLegend").innerHTML=
+    `<span class="k"><span class="swatch" style="background:${curC}"></span>当前能力</span>`+
+    `<span class="k"><span class="swatch" style="background:transparent;border:2px dashed ${tgtC};height:6px"></span>Top 30 目标（按推荐路线）</span>`;
+  $("radarTable").innerHTML="<tr><th>维度</th><th style='text-align:right'>当前</th><th style='text-align:right'>目标</th><th style='text-align:right'>差距</th></tr>"+
+    radar.dims.map((d,i)=>`<tr><td>${d}</td><td class="num">${radar.current[i]}</td><td class="num">${target[i]}</td><td class="num">${Math.max(0,target[i]-radar.current[i])}</td></tr>`).join("");
+}
+
+function renderTimeline(phases){
+  $("timeline").innerHTML=phases.map(p=>`
+    <div class="phase">
+      <h3>${p.phase}</h3>
+      <div class="p-sub">路径模式：${p.tone}</div>
+      <ul class="tasks">
+        ${p.academic_goals.map(g=>`<li><span class="pill a">学术</span><b>${g.subject}</b>｜${g.knowledge_points.join("；")}<br><span style="color:var(--muted)">目标水平：${g.target_level}</span></li>`).join("")}
+        ${p.standardized_tests.map(t=>`<li><span class="pill t">标化</span><b>${t.test_name}</b>｜目标 ${t.target_score}｜节点 ${t.deadline}</li>`).join("")}
+        ${p.extracurricular_and_competitions.map(c=>`<li><span class="pill c">竞赛/背景</span>${c}</li>`).join("")}
+      </ul>
+    </div>`).join("");
+}
+
+function run(){
+  const inp=readInput();
+  if(!Object.keys(inp.subjects).length && !inp.eng && !Object.keys(inp.map).length){
+    alert("请至少输入一类数据（校内成绩 / 英语标化 / MAP）"); return;
+  }
+  const r=analyze(inp);
+  $("results").style.display="block";
+  $("tLevel").textContent=r.level;
+  $("tLevelSub").textContent=`综合指数 ${r.overall}/100 · ${r.levelSub}`;
+  $("tUk").textContent=r.ukProb; $("tUkSub").textContent=r.ukSub;
+  $("tUs").textContent=r.usProb; $("tUsSub").textContent=r.usSub;
+  $("strengthList").innerHTML=r.strengths.map(s=>`<li class="ok">${s}</li>`).join("");
+  $("gapList").innerHTML=r.gaps.map(g=>`<li>${g}</li>`).join("");
+  $("routeBadge").textContent = r.route==="Dual" ? "Dual · 双轨并行" : "推荐路线：" + r.route;
+  $("routeReason").textContent=r.reason;
+  renderRadar(r.radar,r.target);
+  renderTimeline(r.phases);
+  $("json").textContent=JSON.stringify(r.json,null,2);
+  $("results").scrollIntoView({behavior:"smooth"});
+}
+$("runBtn").addEventListener("click",run);
+$("copyJson").addEventListener("click",e=>{
+  e.preventDefault();
+  navigator.clipboard.writeText($("json").textContent).then(()=>{e.target.textContent="已复制";setTimeout(()=>e.target.textContent="复制",1500);});
+});
+</script>
+</body>
+</html>
