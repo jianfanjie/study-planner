@@ -614,10 +614,23 @@ const mapPct=(rit,dim,g)=>{
 
 /* ---------- 动态科目表单（按体系专属渲染） ---------- */
 const opt=(list,sel)=>list.map(o=>`<option value="${o}" ${o===sel?"selected":""}>${o}</option>`).join("");
+/* GPA 量表随体系适配：IB=1-7 均分 / DP 45 总分；A-Level=百分制；AP=4.0 美式 Transcript */
+const GPA_SCALES={
+  myp:[["45","/45（DP 总分）"],["7","/7（IB 均分）"],["4.0","/4.0"]],
+  igcse:[["100","/100（百分制）"],["4.0","/4.0"]],
+  us:[["4.0","/4.0"],["4.3","/4.3"],["5.0","/5.0"]],
+  explore:[["100","/100（百分制）"],["4.0","/4.0"]],
+};
+const GPA_PLACEHOLDER={myp:"如 38",igcse:"如 88",us:"如 3.7",explore:"如 88"};
 function renderSubjectInputs(){
   const sys=$("gradeSystem").value;
   const box=$("subjectInputs");
-  $("gpaChannelHint").textContent = sys==="igcse" ? "（可选：用于校内 Transcript 或申美/申港换算）" : "（可留空）";
+  const prevScale=$("gpaScale").value;
+  const scales=GPA_SCALES[sys]||GPA_SCALES.us;
+  $("gpaScale").innerHTML=scales.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  $("gpaScale").value=scales.some(([v])=>v===prevScale)?prevScale:scales[0][0];
+  $("gpaValue").placeholder=GPA_PLACEHOLDER[sys]||"如 3.7";
+  $("gpaChannelHint").textContent = sys==="igcse" ? "（可选：百分制均分或美式 Transcript）" : sys==="myp" ? "（可留空：填 DP 预估总分或 IB 均分）" : "（可留空）";
   $("gpaSysNote").textContent = sys==="igcse"
     ? "⚙ A-Level 大考/预估等级将自动折算为等效 GPA 参与 AI 计算：A* = 4.0 · A = 4.0 · B = 3.0 · C = 2.0（通道 A）；填写校内 GPA 则优先采用（通道 B）"
     : sys==="myp"
@@ -800,7 +813,8 @@ $("demoBtn").addEventListener("click",()=>{
   for(const k in DEMOS) if($(k)) $(k).value=DEMOS[k];
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
-  $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
+  const GDEMO={myp:["38","45"],igcse:["88","100"],us:["3.6","4.0"],explore:["88","100"]}[sys];
+  $("gpaValue").value=GDEMO[0]; $("gpaScale").value=GDEMO[1]; $("gpaTrend").value="rising"; $("rigor").value="challenge";
   selComps=["sic"]; renderCompChips();
   $("leadership").value="leader"; $("research").value="mentored"; $("summer").value="academic";
   saveInputs();
@@ -895,8 +909,12 @@ function analyze(inp,uni){
   }
   const gv=parseFloat(inp.gpaValue);
   if(!isNaN(gv)&&gv>0){
-    gpa4=clamp(gv/parseFloat(inp.gpaScale)*4.0,0,4.0);
-    gpaNote=`通道 B：校内 Transcript GPA ${gv}/${inp.gpaScale} → 标准化 ${gpa4.toFixed(2)}/4.0`;
+    /* 按量表换算（IB 7 分制 / DP 45 制 / 百分制用官方对照锚点，非线性除法） */
+    const sc=inp.gpaScale;
+    if(sc==="7"){ gpa4=clamp(interp([[3,2.0],[4,3.0],[5,3.3],[6,3.7],[7,4.0]],gv),0,4.0); gpaNote=`通道 B：校内 IB 均分 ${gv}/7 → 等效 GPA ${gpa4.toFixed(2)}/4.0（7=4.0 · 6=3.7 · 5=3.3）`; }
+    else if(sc==="45"){ gpa4=clamp(interp([[24,2.6],[30,3.2],[35,3.6],[38,3.8],[40,3.9],[42,3.95],[45,4.0]],gv),0,4.0); gpaNote=`通道 B：DP 预估总分 ${gv}/45 → 等效 GPA ${gpa4.toFixed(2)}/4.0`; }
+    else if(sc==="100"){ gpa4=clamp(interp([[60,2.0],[70,2.6],[80,3.2],[85,3.5],[90,3.8],[95,4.0],[100,4.0]],gv),0,4.0); gpaNote=`通道 B：校内百分制均分 ${gv}/100 → 等效 GPA ${gpa4.toFixed(2)}/4.0`; }
+    else { gpa4=clamp(gv/parseFloat(sc)*4.0,0,4.0); gpaNote=`通道 B：校内 Transcript GPA ${gv}/${sc} → 标准化 ${gpa4.toFixed(2)}/4.0`; }
   } else if(present.length){
     if(inp.sys==="explore"){
       gpa4=clamp(interp([[60,2.0],[70,2.6],[80,3.2],[85,3.5],[90,3.8],[95,4.0],[100,4.0]],mean(present.map(c=>parseFloat(c.raw)||70))),0,4.0);
