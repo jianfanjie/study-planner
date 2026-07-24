@@ -107,6 +107,15 @@ button.btn:hover{filter:brightness(1.06)}
 .ms-chip input{width:13px;height:13px;accent-color:var(--s2);cursor:pointer}
 .ms-chip.done{border-color:var(--s2);color:var(--good-text);background:color-mix(in srgb,var(--s2) 9%,transparent)}
 .road-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.sec{font-size:12px;font-weight:700;color:var(--s1);margin:0 0 8px}
+.sec~.sec{margin-top:14px}
+.alerts{list-style:none;margin-bottom:10px}
+.alerts li{font-size:12.5px;padding:5px 10px;margin:5px 0;border-left:3px solid var(--s6);background:color-mix(in srgb,var(--s6) 7%,transparent);color:var(--ink-2)}
+.alerts li b{color:var(--s6)}
+.lane{display:inline-block;font-size:10.5px;font-weight:600;border-radius:5px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.lane.l1{background:color-mix(in srgb,var(--s1) 14%,transparent);color:var(--s1)}
+.lane.l2{background:color-mix(in srgb,var(--s2) 14%,transparent);color:var(--good-text)}
+.lane.l3{background:color-mix(in srgb,var(--s6) 14%,transparent);color:var(--s6)}
 .combo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .combo{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--page)}
 .combo h4{font-size:13px;margin-bottom:6px}
@@ -121,6 +130,14 @@ svg{max-width:100%;height:auto}
 details.raw{margin-top:6px}
 details.raw summary{font-size:12px;color:var(--muted);cursor:pointer}
 pre.json{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:11.5px;overflow-x:auto;max-height:340px;margin-top:8px}
+@media print{
+  body{padding:0;background:#fff}
+  .hero .countdown,#cardUni,#cardInput,#printBtn,details.raw,.rtabs button:not(.active){display:none !important}
+  #printHeader{display:block !important}
+  .card{break-inside:avoid;box-shadow:none}
+  .ai{border-width:1.5px}
+  .node{padding-bottom:10px}
+}
 </style>
 </head>
 <body>
@@ -135,16 +152,17 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 </div>
 
 <!-- ① 目标大学 -->
-<div class="card">
+<div class="card" id="cardUni">
   <h2><span class="step">1</span>选择目标大学</h2>
   <div id="uniList"></div>
 </div>
 
 <!-- ② 输入分数 -->
-<div class="card">
-  <h2><span class="step">2</span>输入当前分数</h2>
+<div class="card" id="cardInput">
+  <h2><span class="step">2</span>学术档案输入</h2>
   <div class="grid2">
     <div>
+      <div class="sec">❶ 年级与课程体系</div>
       <div class="grid3" style="margin-bottom:10px">
         <div>
           <label for="gradeLevel">今年 9 月升入</label>
@@ -157,18 +175,45 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
         <div style="grid-column:span 2">
-          <label for="gradeSystem">校内成绩体系</label>
+          <label for="gradeSystem">课程体系</label>
           <select id="gradeSystem">
-            <option value="myp">IB / MYP（1–7 分）</option>
-            <option value="igcse">英制（A*–E 或 9–1）</option>
-            <option value="us">美制（A–F）</option>
+            <option value="myp">IB 体系（MYP/DP · 1–7 分）</option>
+            <option value="igcse">A-Level 体系（英制 · A*–E / 9–1）</option>
+            <option value="us">AP 体系（美制 · A–F / GPA）</option>
           </select>
         </div>
       </div>
-      <label style="margin-bottom:6px">各科成绩（可留空）</label>
+      <div class="sec">❷ GPA 档案（分数 / 走势 / 难度）</div>
+      <div class="grid3" style="margin-bottom:8px">
+        <div>
+          <label for="gpaValue">校内 GPA <span id="gpaChannelHint" style="color:var(--muted)">（可留空）</span></label>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="gpaValue" placeholder="如 3.7" step="0.01" min="0" style="flex:1.4">
+            <select id="gpaScale" style="flex:1"><option value="4.0">/4.0</option><option value="4.3">/4.3</option><option value="5.0">/5.0</option></select>
+          </div>
+        </div>
+        <div>
+          <label for="gpaTrend">GPA 走势</label>
+          <select id="gpaTrend">
+            <option value="stable">高位稳定</option>
+            <option value="rising">持续上升</option>
+            <option value="volatile">起伏波动</option>
+            <option value="declining">呈现下滑</option>
+          </select>
+        </div>
+        <div>
+          <label for="rigor">课程难度系数</label>
+          <select id="rigor">
+            <option value="standard">标准级</option>
+            <option value="challenge">挑战级（Honors/HL/Add Math）</option>
+          </select>
+        </div>
+      </div>
+      <label style="margin-bottom:6px">各科成绩（可留空；A-Level 体系下即“通道 A”，将自动换算等效 GPA）</label>
       <div class="subj-grid" id="subjectInputs"></div>
     </div>
     <div>
+      <div class="sec">❸ 语言与标化</div>
       <div class="field">
         <label for="engType">学术英语</label>
         <div style="display:flex;gap:8px">
@@ -187,6 +232,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
         <div><label for="mapLang">Language</label><input type="number" id="mapLang" placeholder="222"></div>
         <div><label for="mapMath">Math</label><input type="number" id="mapMath" placeholder="235"></div>
       </div>
+      <div class="sec">❹ 目标与专业（目标大学在上方 ① 选择）</div>
       <div class="grid3">
         <div>
           <label for="pref">学科偏好</label>
@@ -220,9 +266,16 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 <!-- 结果 -->
 <div id="results">
 
+  <div id="printHeader" style="display:none;text-align:center;margin-bottom:18px">
+    <div style="font-size:20px;font-weight:800">个人学业诊断与路线图</div>
+    <div style="font-size:12px;color:var(--muted)" id="printMeta"></div>
+  </div>
+
   <!-- AI 路线确立卡片 -->
   <div class="card ai">
-    <h2 style="margin-bottom:14px">🎯 AI 智能路线确立</h2>
+    <h2 style="margin-bottom:14px;display:flex;align-items:center">🎯 AI 智能路线确立
+      <button class="btn" id="printBtn" style="margin-left:auto;font-size:12px;padding:4px 14px;font-weight:600">🖨 导出诊断报告 / PDF</button>
+    </h2>
     <div class="ai-flex">
       <div class="ai-conf">
         <svg id="confGauge" width="120" height="100" viewBox="0 0 120 100"></svg>
@@ -262,6 +315,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
       <div class="prob" id="prob">—</div>
       <div class="gauge-sub" id="probSub"></div>
       <div class="gauge-sub" id="levelLine" style="margin-top:12px;font-size:12.5px;color:var(--ink-2)"></div>
+      <div class="gauge-sub" id="gpaLine" style="margin-top:8px;font-size:12px;text-align:left"></div>
     </div>
   </div>
 
@@ -273,7 +327,8 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 
   <!-- 顾问总评 -->
   <div class="card">
-    <h2>📋 顾问总评</h2>
+    <h2>📋 顾问总评与交叉预警</h2>
+    <ul class="alerts" id="alertList"></ul>
     <p style="font-size:13px;color:var(--ink-2);line-height:1.7" id="advisorText"></p>
     <h3 style="font-size:13px;font-weight:700;margin:12px 0 6px">近 90 天行动清单</h3>
     <ul class="acts" id="actionList"></ul>
@@ -426,7 +481,7 @@ function renderSubjectInputs(){
     `<select id="subj_${s.key}"><option value="">— ${s.label}</option>${GRADE_OPTIONS[sys].map(g=>`<option value="${g}">${s.label}：${g}</option>`).join("")}</select>`).join("");
   document.querySelectorAll("#subjectInputs select").forEach(el=>el.addEventListener("change",saveInputs));
 }
-const INPUT_IDS=["gradeLevel","gradeSystem","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
+const INPUT_IDS=["gradeLevel","gradeSystem","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
 function saveInputs(){
   const d={};
   for(const id of INPUT_IDS) d[id]=$(id).value;
@@ -459,6 +514,7 @@ $("demoBtn").addEventListener("click",()=>{
   for(const k in demo) $("subj_"+k).value=demo[k];
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
+  $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
   saveInputs();
 });
 
@@ -477,7 +533,8 @@ function readInput(){
     const v=parseFloat($(id).value);
     if(!isNaN(v)) map[dim]={rit:v,pct:mapPct(v,dim,grade)};
   }
-  return {sys,grade,subjects,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value};
+  return {sys,grade,subjects,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
+          gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
 }
 
 function analyze(inp,uni){
@@ -498,12 +555,43 @@ function analyze(inp,uni){
   const langAb=engIdx!=null?engIdx:50;
   const writing=clamp((engIdx??55)*0.5+(idx("humanities")??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
   const inquiry=clamp((mean(sci)??55)*0.6+(inp.map.reading?inp.map.reading.pct:(engIdx??55))*0.4,0,100);
-  const current=[depth,breadth,writing,langAb,inquiry].map(r1);
+
+  /* ===== GPA 双引擎：三体系换算 + 走势/难度加权 ===== */
+  const AL_GPA={"A*":4.0,"A":4.0,"B":3.0,"C":2.0,"D":1.0,"E":0.5,"9":4.0,"8":4.0,"7":3.7,"6":3.3,"5":3.0,"4":2.3,"3":2.0,"2":1.0,"1":0.5};
+  const US_GPA={"A+":4.0,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D":1.0,"F":0};
+  let gpa4=null, gpaWeighted=null, gpaNote="";
+  const gv=parseFloat(inp.gpaValue);
+  if(!isNaN(gv)&&gv>0){
+    gpa4=clamp(gv/parseFloat(inp.gpaScale)*4.0,0,4.0);
+    gpaNote=`通道 B：校内 Transcript GPA ${gv}/${inp.gpaScale} → 标准化 ${gpa4.toFixed(2)}/4.0`;
+  } else if(present.length){
+    if(inp.sys==="igcse"){
+      gpa4=clamp(mean(present.map(s=>AL_GPA[s.raw]??2.0)),0,4.0);
+      gpaNote=`通道 A：Letter Grades 换算等效 GPA ${gpa4.toFixed(2)}/4.0（A*=4.0 · A=4.0 · B=3.0 · C=2.0）`;
+    } else if(inp.sys==="myp"){
+      const est45=r1(mean(present.map(s=>parseFloat(s.raw)||4))*6+2);
+      gpa4=clamp(interp([[20,2.2],[24,2.6],[28,3.0],[32,3.4],[36,3.7],[40,3.9],[43,4.0],[45,4.0]],est45),0,4.0);
+      gpaNote=`IB 动态映射：估算 DP 总分 ≈${est45}/45 → GPA ${gpa4.toFixed(2)}/4.0（${inp.rigor==="challenge"?"HL 占比高，含金量加权":"HL/SL 标准配比"}）`;
+    } else {
+      gpa4=clamp(mean(present.map(s=>US_GPA[s.raw]??2.0)),0,4.0);
+      gpaNote=`由课堂 Letter Grades 换算未加权 GPA ${gpa4.toFixed(2)}/4.0`;
+    }
+  }
+  if(gpa4!=null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
+  const TREND_ADJ={rising:4,stable:0,volatile:-3,declining:-7};
+  const TREND_LABEL={rising:"持续上升",stable:"高位稳定",volatile:"起伏波动",declining:"呈现下滑"};
+  let gpaIdx=null;
+  if(gpa4!=null) gpaIdx=clamp(interp([[2.0,40],[2.6,55],[3.0,64],[3.3,72],[3.6,80],[3.8,87],[3.9,91],[4.0,95],[4.3,98]],gpaWeighted??gpa4)+TREND_ADJ[inp.gpaTrend],0,100);
+  const gpaHard = gpaIdx!=null ? r1(allIdx.length? gpaIdx*0.6+mean(allIdx)*0.4 : gpaIdx) : (allIdx.length? r1(mean(allIdx)) : 50);
+  const soft=clamp(52+(inp.gpaTrend==="rising"?5:inp.gpaTrend==="declining"?-6:0)+(inp.rigor==="challenge"?5:0),0,100);
+
+  /* 新五维：GPA硬实力 · 标化语言 · 学科深度/竞赛 · 探究与写作 · 软实力活动 */
+  const current=[gpaHard,r1(langAb),r1(depth),r1((writing+inquiry)/2),r1(soft)];
   const overall=r1(mean(current));
 
-  const na=uni.region==="us"||uni.region==="ca";   // 北美：广度+GPA 评估模型
+  const na=uni.region==="us"||uni.region==="ca";   // 北美：GPA+广度评估模型
   const k=uni.req/(na?90:93);
-  const reqProfile=(na?[85,92,90,90,92]:[95,72,76,90,80]).map(v=>r1(clamp(v*k,0,100)));
+  const reqProfile=(na?[93,90,82,88,90]:[93,90,93,78,68]).map(v=>r1(clamp(v*k,0,100)));
 
   /* ===== 三轨判定算法 ===== */
   const s={ "A-Level":0, "IB":0, "AP":0 };
@@ -546,6 +634,10 @@ function analyze(inp,uni){
   if(inp.sys==="igcse") add("A-Level",1,"校内英制，IGCSE → A-Level 直通");
   /* 自评偏好 */
   if(inp.pref!=="undecided") add("A-Level",1,inp.pref==="stem"?"自评偏理，适合 3-4 门垂直深耕":"自评偏文，可完全砍掉弱势理科");
+  /* GPA 保护机制（A-Level 扬长避短） */
+  if(inp.gpaTrend==="declining") add("A-Level",1,"GPA 下滑期：A-Level 3–4 门体系利于集中救火，避免 IB 多线程失血");
+  if(Math.abs(spread)>=15) add("A-Level",1,"GPA 保护机制：舍弃弱项后更利于冲 4.0 等效 GPA / A*AA 预估分——扬长避短，保护 GPA 稳健度");
+  if(inp.gpaTrend==="stable"&&Math.abs(spread)<8) add("IB",1,"GPA 高位稳定且均衡——具备 IB 全科维护 GPA 的底气（仍需注意 IB 的 GPA 维护难度）");
 
   const pri = uni.region==="us"?{"AP":3,"IB":2,"A-Level":1}
             : uni.region==="ca"?{"IB":3,"AP":2,"A-Level":1}
@@ -575,6 +667,7 @@ function analyze(inp,uni){
   if(Math.abs(spread)>=20) ibRisks.push(`文理分差 ${r1(Math.abs(spread))} 个指数点（≈2 个分数段），IB 木桶效应下弱科将拖垮总分`);
   if(readLag) ibRisks.push(`MAP Reading（${mR.rit}）显著低于 Math（${mM.rit}），EE 4000 字与 TOK 论文将是最大学术痛点`);
   if(route==="IB"&&ibRisks.length) reason+=` ⚠️ IB 学术风险：${ibRisks[0]}。`;
+  if(route==="A-Level"&&Math.abs(spread)>=15) reason+=" （扬长避短，保护 GPA 稳健度）";
 
   /* 路线风险预警（每条路线都有真实痛点，拒绝只说好话） */
   const RISKS={
@@ -583,6 +676,16 @@ function analyze(inp,uni){
     "AP":"AP 属社会考试、无学校课程体系兜底，完全依赖超前自学与自律；美本录取中 GPA/活动/文书与 AP 同权重，单靠 AP 分数不构成录取优势。",
   };
   const risk=RISKS[route];
+
+  /* ===== 交叉预警与诊断（Cross-Verification & Risk Alert） ===== */
+  const alerts=[];
+  const trendDeclining=inp.gpaTrend==="declining";
+  if(trendDeclining) alerts.push("【GPA 趋势预警】GPA 呈下滑趋势——学术稳健度风险。Roadmap 已强制插入 GPA 救火任务，8 周止跌回稳是当前第一优先级");
+  if(inp.gpaTrend==="volatile") alerts.push("【GPA 趋势提示】GPA 起伏波动——招生官看重成绩曲线的稳定叙事，需定位波动源（选科不当/时间管理）");
+  if(gpaIdx!=null&&langAb>=78&&gpaIdx<70) alerts.push("【匹配度校准】语言标化强但 GPA 偏低——防止被贴上「刷题型/学习态度」标签，优先修复校内成绩叙事");
+  if(gpaIdx!=null&&gpaIdx>=85&&langAb<70) alerts.push("【匹配度校准】GPA 高但语言滞后——提防「GPA 含金量缩水」质疑，尽快用官方标化成绩背书");
+  const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!(inp.rigor==="challenge"&&mathIdx!=null&&mathIdx>=80);
+  if(needAdvMath) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
 
   /* MAP 百分位诊断文本 */
   const mapAnalysis = (mM||mR||mL) ? [
@@ -593,8 +696,8 @@ function analyze(inp,uni){
 
   /* 达标度与概率 */
   const score=na
-    ? clamp(breadth*0.35+langAb*0.25+writing*0.2+inquiry*0.2,0,100)
-    : clamp(depth*0.55+langAb*0.2+(mathIdx??depth)*0.25,0,100);
+    ? clamp(gpaHard*0.35+langAb*0.25+((writing+inquiry)/2)*0.2+soft*0.2,0,100)
+    : clamp(depth*0.45+gpaHard*0.3+langAb*0.25,0,100);
   const readiness=r1(clamp(score/uni.req*100,0,100));
   const ratio=score/uni.req;
   /* 连续概率估算：分数或目标校任何变化都会反映到数值上 */
@@ -616,7 +719,8 @@ function analyze(inp,uni){
   if(engIdx!=null&&engIdx>=78) strengths.push("学术英语已达高阶阅读门槛");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,route,alt,confidence,reason,risk,acadType,mapAnalysis,ibRisks,scores:s,factors,score:r1(score),readiness,prob,probSub,overall,level,gaps,strengths,spread,range,
+  return {current,reqProfile,route,alt,confidence,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall,level,gaps,strengths,spread,range,
+          gpa4,gpaWeighted,gpaNote,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
 
@@ -637,7 +741,7 @@ function semiGauge(svgId,pct,color,bigText,subText,r,w){
   }
 }
 /* ---------- 雷达 ---------- */
-const DIMS=["学术深度","知识广度","科研写作","语言能力","探究能力"];
+const DIMS=["GPA硬实力","标化语言力","学科深度/竞赛","探究与写作","软实力活动"];
 function drawRadar(current,req){
   const svg=$("radar"); svg.innerHTML="";
   const cx=145,cy=124,R=86,N=5;
@@ -814,7 +918,10 @@ function trackNodes(track,a,inp){
     "AP":["锁定 G10 首批 AP ≥2 门（Calculus AB/BC + 1 门理科）","确认 Honors 课表与超前自学计划"],
   }[track];
   const nodes=[];
-  nodes.push({stage:1,icon:"▶",t:`${y0} 暑假 · 现在`,items:[...sum0,...(a.gaps.length?["⚑ 当前差距："+a.gaps.slice(0,2).join("；")]:[])],ms:e<=9?["M1"]:[]});
+  const urgent=[];
+  if(a.trendDeclining) urgent.push("🔥 GPA 救火：定位近两学期失分科目，与任课老师建立周度补分计划（8 周止跌回稳）");
+  if(a.needAdvMath) urgent.push("🔥 高阶数学补位：启动 IGCSE Add Math / AP Calculus 先修（工程·商科硬门槛）");
+  nodes.push({stage:1,icon:"▶",t:`${y0} 暑假 · 现在`,items:[...urgent,...sum0,...(a.gaps.length?["⚑ 当前差距："+a.gaps.slice(0,2).join("；")]:[])],ms:e<=9?["M1"]:[]});
   if(e<=8) nodes.push({stage:1,icon:"0",t:`${YR(8)} 全学年 · ${yrOf(8)}.09–${yrOf(8)+1}.06`,items:P8});
   if(e<=9){
     nodes.push({stage:1,icon:"1",t:`${YR(9)} Term 1 · ${yrOf(9)}.09–12`,items:T.p1,ms:["M2"]});
@@ -839,12 +946,15 @@ function renderRoad(track){
     b.style.background=on?css(ROUTE_COLOR[b.dataset.track]):"";
     b.style.borderColor=on?css(ROUTE_COLOR[b.dataset.track]):"";
   });
+  const laneOf=s=>/UCAS|Common App|OUAC|Non-JUPAS|递交|文书|PS |申请|选校|推荐信|ED\/EA|直申/.test(s)?"l3"
+    :/竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|Kaggle|Scholastic|科研|夏校|作品集|CAS/.test(s)?"l2":"l1";
+  const LANE_LABEL={l1:"GPA·标化",l2:"竞赛·科研",l3:"背景·申请"};
   const nodes=trackNodes(track,lastA,lastInp);
   $("road").innerHTML=nodes.map(n=>`
     <div class="node ${n.cls||""}">
       <div class="dot" style="border-color:${n.cls==="decide"?css("--s6"):n.cls==="grad"?css("--s2"):color}">${n.icon}</div>
       <h4>${n.t}${n.tag?`<span class="tag">${n.tag}</span>`:""}</h4>
-      <div class="items">${n.items.map(i=>`<span>${i}</span>`).join("")}</div>
+      <div class="items">${n.items.map(i=>{const ln=laneOf(i);return `<span><span class="lane ${ln}">${LANE_LABEL[ln]}</span>${i}</span>`;}).join("")}</div>
       ${n.ms?`<div>${n.ms.map(msChip).join("")}</div>`:""}
     </div>`).join("");
   updateMsProgress();
@@ -918,7 +1028,10 @@ function run(scroll=true){
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
   if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
   if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
-  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率区间 ${a.prob}。路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  $("alertList").innerHTML=a.alerts.length
+    ? a.alerts.map(x=>{const i=x.indexOf("】");return `<li><b>${x.slice(0,i+1)}</b>${x.slice(i+1)}</li>`;}).join("")
+    : `<li style="border-color:var(--s2);background:color-mix(in srgb,var(--s2) 6%,transparent)"><b style="color:var(--good-text)">【交叉校验通过】</b>GPA、语言、选科三项匹配度未触发风险规则</li>`;
   $("advisorText").textContent=advisor;
   $("actionList").innerHTML=acts.slice(0,4).map(x=>`<li>${x}</li>`).join("");
   /* 三视图 */
@@ -928,6 +1041,8 @@ function run(scroll=true){
   $("prob").textContent=a.prob;
   $("probSub").textContent=a.probSub;
   $("levelLine").textContent=`综合定位：${a.level}（指数 ${a.overall}/100）· 学术画像：${a.acadType}`;
+  $("gpaLine").textContent = a.gpa4!=null ? `⚙ GPA 引擎：${a.gpaNote}｜走势：${a.trendLabel}` : "⚙ GPA 引擎：未提供 GPA / 成绩数据，建议补录以启用双引擎评估";
+  $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ 推荐路线：${a.route} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
   drawBars(inp,targetUni);
   $("roadUni").textContent=targetUni.name;
   renderRoadTabs(a);
@@ -940,6 +1055,14 @@ function run(scroll=true){
       strengths:a.strengths,
       gaps_to_target_university:a.gaps,
     },
+    gpa_profile:{
+      curriculum_system:inp.sys==="myp"?"IB":inp.sys==="igcse"?"A-Level":"AP",
+      equivalent_gpa_4:a.gpa4!=null?+a.gpa4.toFixed(2):null,
+      weighted_gpa:a.gpaWeighted!=null?+a.gpaWeighted.toFixed(2):null,
+      trend:a.trendLabel, rigor:inp.rigor==="challenge"?"挑战级":"标准级",
+      conversion_note:a.gpaNote||"未提供数据",
+    },
+    cross_alerts:a.alerts,
     recommended_route_engine:{
       primary_route:a.route==="IB"?"IB DP":a.route,
       reasoning_logic:a.reason,
@@ -962,6 +1085,7 @@ function run(scroll=true){
   if(scroll) $("results").scrollIntoView({behavior:"smooth"});
 }
 $("runBtn").addEventListener("click",()=>run(true));
+$("printBtn").addEventListener("click",()=>window.print());
 if(hadSaved){
   const inp=readInput();
   if(Object.keys(inp.subjects).length||inp.eng||Object.keys(inp.map).length) run(false);
