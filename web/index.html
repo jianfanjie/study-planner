@@ -709,6 +709,8 @@ const COMP_DB=[
   /* 商科 / 经济 */
   {id:"nec_f", cat:"bus", t:1, core:1, n:"NEC 全美经济学挑战赛（中国站决赛 / 全球站）", m:"12 月区域站 → 3 月中国站 → 5 月全球站"},
   {id:"ieo",   cat:"bus", t:1, n:"IEO 国际经济学奥林匹克（国家队 / 国际赛）", m:"春季国内选拔 → 7 月国际赛"},
+  {id:"ja",    cat:"bus", t:2, hk:1, n:"JA Company Program 香港青年成就计划", m:"9 月组队 → 次年 4 月路演"},
+  {id:"hksec", cat:"bus", t:2, hk:1, n:"HKSEC 香港社会企业挑战赛", m:"全年赛季 · 春季决赛"},
   {id:"sic",   cat:"bus", t:2, core:1, n:"SIC 中学生投资挑战赛（全国奖）", m:"9 月 – 次年 4 月赛季"},
   {id:"kwhs",  cat:"bus", t:2, n:"沃顿全球投资挑战 WGHS（原 KWHS）", m:"9 – 12 月比赛季"},
   {id:"fbla",  cat:"bus", t:2, n:"FBLA 美国未来商业领袖挑战（全国奖）", m:"12 月初选 → 次年 4 月全国"},
@@ -719,6 +721,9 @@ const COMP_DB=[
   {id:"usaco_g",cat:"stem",t:1,n:"USACO 美国信息学奥赛（金组 / 铂金）", m:"12 – 2 月月赛升组 + 3 月公开赛"},
   {id:"aime",  cat:"stem",t:2, core:1, n:"AMC12 前 5% → AIME 晋级（美国数学竞赛）", m:"11 月 AMC → 次年 2 月 AIME"},
   {id:"yau",   cat:"stem",t:2, n:"丘成桐中学科学奖（入围以上）", m:"4 月报名 → 12 月总决赛"},
+  {id:"hkmo",  cat:"stem",t:2, hk:1, n:"HKMO 香港数学竞赛（决赛级）", m:"春季"},
+  {id:"hkoi",  cat:"stem",t:2, hk:1, n:"HKOI 香港信息学奥赛", m:"11 月初赛 → 2 月决赛"},
+  {id:"hkysic",cat:"stem",t:2, hk:1, n:"HKYSIC 香港青少年科技创新大赛", m:"9 月申报 → 3 月终审"},
   {id:"euclid",cat:"stem",t:3, core:1, n:"Euclid 欧几里得数学竞赛（滑铁卢）", m:"4 月"},
   {id:"pbowl", cat:"stem",t:3, n:"Physics Bowl 物理碗", m:"3 月下旬"},
   {id:"stem_s",cat:"stem",t:4, n:"校级数学 / 科学竞赛 · STEM 社团", m:"全年"},
@@ -736,6 +741,8 @@ const COMP_DB=[
   {id:"marshall",cat:"hum",t:2, n:"剑桥 Marshall Society 经济论文赛", m:"暑期截稿"},
   {id:"nyt",   cat:"hum", t:2, n:"纽约时报 NYT 中学生写作 / 社论竞赛", m:"分赛道全年滚动"},
   {id:"nhd",   cat:"hum", t:2, n:"NHD 美国国家历史日（全国赛）", m:"校 / 区赛 → 6 月全国"},
+  {id:"hkssdc",cat:"hum", t:2, hk:1, n:"HKSSDC 香港英文辩论赛", m:"10 月 – 次年 3 月赛季"},
+  {id:"hkmun", cat:"hum", t:2, hk:1, n:"HKMUN 香港模联", m:"3 月会期"},
   {id:"mun",   cat:"hum", t:2, n:"哈佛 / 耶鲁模联（最佳代表）", m:"1 – 3 月会期"},
   {id:"schol", cat:"hum", t:2, n:"Scholastic 学术艺术与写作奖（金 / 银钥匙）", m:"12 月截稿"},
   {id:"hum_s", cat:"hum", t:3, n:"校级辩论 / 模联 / 校刊", m:"全年"},
@@ -1248,7 +1255,14 @@ function analyze(inp,uni){
   const recs=(()=>{
     const cat=CAT_OF[mkEff]||"bus", has=new Set(compSel.map(c=>c.id));
     const goalT=(bestTier&&bestTier<=2)?1:2;
-    return COMP_DB.filter(c=>c.cat===cat&&!has.has(c.id)&&c.t<=goalT).sort((x,y)=>x.t-y.t).slice(0,2);
+    const pool=COMP_DB.filter(c=>c.cat===cat&&!has.has(c.id)&&c.t<=goalT).sort((x,y)=>x.t-y.t);
+    /* 目标含港校 → 1 个全球顶级 + 1 个香港本土高含金量项目（组面/PS 本土叙事素材） */
+    if(selRegions.has("hk")){
+      const g=pool.find(c=>!c.hk), h=pool.find(c=>c.hk);
+      const mix=[g,h].filter(Boolean);
+      if(mix.length) return mix;
+    }
+    return pool.slice(0,2);
   })();
   if(selRegions.has("us")&&actFilled&&actScore===0) alerts.push("【软背景预警】目标含美本，但竞赛/活动/科研档案均为「暂无」——综合评价体系下概率将被显著压制，建议立即立项 1 个长期活动 + 报名 1 项竞赛");
   if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写软实力档案——当前美本概率按保守代理值估算，补录后将重新校准");
@@ -1306,16 +1320,25 @@ function analyze(inp,uni){
     au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
   };
   let probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
+  /* HKU Non-JUPAS：学术硬指标 Cut-off 驱动——IB 预估 ≥39 / A-Level 均分 A*A*A 档 / AP 4门5分+GPA3.9 → 过线即入 60-75% 高概率区间（组面决胜） */
+  const hkuCutoff = uni.id==="hku" && (
+    (inp.sys==="myp"&&ibEst45!=null&&ibEst45>=39) ||
+    (inp.sys==="igcse"&&allIdx.length>=3&&mean(allIdx)>=93) ||
+    (inp.sys==="us"&&present.filter(c=>c.apExam==="5").length>=4&&gpa4!=null&&(gpaWeighted??gpa4)>=3.9)
+  );
   /* 语言门槛（按各校官方线）：美本=硬拒因素封顶 5%；英港加澳=条件 offer 制封顶 35% */
   const engLow = uni.engReq!=null&&engIdx!=null&&engIdx<uni.engReq;
   const usLangGate = uni.region==="us"&&engLow;
   if(usLangGate) probPct=Math.min(probPct,5);
   else if(engLow) probPct=Math.min(probPct,35);
+  else if(hkuCutoff) probPct=clamp(Math.max(probPct,65),60,75);
   const prob=`≈ ${probPct}%`;
   const probSub=(usLangGate
     ? "⚠️ 语言硬门槛未达：美本 Top 30 实际要求 TOEFL 100+（录取者典型 110+）——当前概率封顶 5%，冲分后自动解锁"
     : engLow
     ? `⚠️ 语言未达该校线（${uni.engLabel}）——英联邦体系 offer 将附带语言条件，入学前须达标（概率暂封顶 35%）`
+    : hkuCutoff
+    ? "HKU Non-JUPAS 采用【硬指标过线 + 组面（Group Interview）决胜】机制：当前学术分已踏穿港大门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材"
     : uni.region==="us"
     ? "美本为 Holistic Review 综合评估：学术达标仅为入场券（概率硬性封顶 25%），文书与独特性软背景决定上限（学术 40% + 软实力 60% 权重模型）"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
@@ -1342,7 +1365,7 @@ function analyze(inp,uni){
   if(inp.leadership==="impact") strengths.push("有量化影响力的长期活动——综合评价体系的高权重素材");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,comps:compSel,bestTier,recs,soft:r1(soft),route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
+  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,comps:compSel,bestTier,recs,soft:r1(soft),hkuCutoff,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -1498,19 +1521,22 @@ function renderProfileMatrix(a,inp,mk){
   const SUM_L={general:["普通游学 / 兴趣夏校",4],academic:["大学学术夏校（有学分 / 产出）",2],elite:["顶尖选拔制夏校（RSI/SSP/LaunchX）",1]};
   /* 国别倾向适配：申美 → 领导力高亮 + 美系选拔营；纯英港 → 学术纯粹度提示 + 英系学术拓展 */
   const regs=new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>u.region));
-  const hasUS=regs.has("us"), ukhkOnly=(regs.has("uk")||regs.has("hk"))&&!hasUS;
+  const hasUS=regs.has("us"), hkSel=regs.has("hk"), ukhkOnly=(regs.has("uk")||hkSel)&&!hasUS;
   const cat=CAT_OF[mk]||"bus";
-  const sumRec=(hasUS
+  const sumRec=(hkSel
+    ? {bus:"HKU Summer Institute（港大暑期学院·商科）/ 牛剑英系学术拓展营",stem:"HKUST 科学营 / HKU Summer Institute / 牛剑学术拓展营",sci:"HKUST 科学营 / HKU Summer Institute（生命科学）",hum:"HKU Summer Institute（人文社科）/ 牛剑人文暑校"}
+    : hasUS
     ? {bus:"沃顿 LBW / LaunchX 创业营",stem:"SSP / RSI / 牛剑暑研",sci:"SSP 生化方向 / 大学实验室暑研",hum:"爱荷华青年作家工作坊 / 牛津人文暑校"}
     : {bus:"LSE / 剑桥经济学术夏校",stem:"牛剑 / 帝国理工学术夏校 · BPhO/AMC 训练营",sci:"UNIQ / 剑桥自然科学暑校",hum:"牛剑人文暑校 / John Locke 写作营"})[cat];
   $("pmGrid").innerHTML=[
     {h:"① 核心竞赛履历",have:a.comps.length?a.comps.map(c=>li(c.t,c.n)).join(""):none,
      rec:a.recs.length?a.recs.map(c=>li(c.t,`${c.n}（${c.m}）`)).join(""):li(1,"已达 Tier 1 顶配——维持并深化获奖主线")},
     {h:"② 学术科研 / 写作",have:RES_L[inp.research]?li(RES_L[inp.research][1],RES_L[inp.research][0]):none,
-     rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,"冲击丘奖 / ISEF 附属赛（Tier 1）"):li(2,`${RES_REC[inp.sys]||RES_REC.explore}（Tier 2）`)},
+     rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,`冲击丘奖 / ISEF 附属赛（Tier 1）${hkSel?"，或以港大·中大青少年研学课题深化产出":""}`):li(2,`${RES_REC[inp.sys]||RES_REC.explore}${hkSel?" / 港大·中大青少年学术研学课题":""}（Tier 2）`)},
     {h:"③ 领导力与社团"+(hasUS?"（美本高权重）":""),hl:hasUS,
      have:LEAD_L[inp.leadership]?li(LEAD_L[inp.leadership][1],LEAD_L[inp.leadership][0]):none,
-     rec:ukhkOnly?li(2,"英港录取看重学术纯粹度——社团保持适度参与即可，时间优先投入垂直学科竞赛与探究项目")
+     rec:hkSel?li(2,(inp.leadership==="impact"?"已具影响力主线——叠加香港本土背书：":"")+"AYP 香港青年奖励计划（爱丁堡公爵奖 金/银章）· 香港杰出学生选举 · Feeding HK / Crossroads 核心志愿者（组面与 PS 本土叙事素材）")
+        :ukhkOnly?li(2,"英港录取看重学术纯粹度——社团保持适度参与即可，时间优先投入垂直学科竞赛与探究项目")
         :inp.leadership==="impact"?li(1,"沉淀量化数据（人数 / 资金 / 媒体报道）进文书"):li(2,"将参与升级为「可量化影响力」主线项目（创始 / NGO）")},
     {h:"④ 夏校与学术营地",have:SUM_L[inp.summer]?li(SUM_L[inp.summer][1],SUM_L[inp.summer][0]):none,
      rec:inp.summer==="elite"?li(1,"用夏校导师推荐信 + 科研产出背书申请"):li(hasUS?1:2,`12 – 1 月申请：${sumRec}（${hasUS?"选拔制 = Tier 1 背书":"英系学术拓展背书"}）`)},
@@ -1540,7 +1566,7 @@ function trackNodes(track,a,inp){
   const decY=yrOf(10)+1;                // G10 结束（定线）的 6 月
   const uni=a.uni, us=uni.region==="us";
   const applyStr = us?"Common App 文书 + ED/EA 递交（11 月）"
-    : uni.region==="hk"?"Non-JUPAS 递交港三所（UCAS 可同步英国）"
+    : uni.region==="hk"?"9–11 月 HKU Non-JUPAS Early Round 提前批递交窗口（UCAS 可同步英国）"
     : uni.region==="ca"?"OUAC 递交（多大/麦吉尔，次年 1 月截止）"
     : uni.region==="au"?"直申递交（墨大/悉尼，滚动录取）"
     : "UCAS 递交（牛剑 10.15 / 常规 1 月）";
@@ -1591,6 +1617,11 @@ function trackNodes(track,a,inp){
     hum:{p3:["🏆 4 月 John Locke 报名 → 6 月底提交（Tier 1 通道）"],p4:["🏆 12 月 Scholastic 写作奖投稿 / NHD（Tier 2）","🏆 1–3 月 哈佛/耶鲁模联会期（Tier 2）"],sum:"🏆 暑期：John Locke 论文终稿 / 写作集打磨"},
   }[cat];
   T.p3=[...T.p3,...CAL.p3]; T.p4=[...T.p4,...CAL.p4];
+  /* HKU Non-JUPAS 节奏：递交后组面冲刺 → Conditional Offer → 补交预估分 */
+  if(uni.region==="hk"){
+    T.p5=[...T.p5,"12–2 月 港大组面（Group Interview）冲刺准备：时事+专业动机+小组协作模拟"];
+    T.p6=["1–3 月 Conditional Offer 接收 → 补交预估分，大考出分后换 Firm Offer",...T.p6];
+  }
   /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
   const SUMMER={
     "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）",CAL.sum],12:["预测分冲刺复习","PS 文书初稿"]},
@@ -1636,7 +1667,7 @@ function renderRoad(track){
     b.style.background=on?css(ROUTE_COLOR[b.dataset.track]):"";
     b.style.borderColor=on?css(ROUTE_COLOR[b.dataset.track]):"";
   });
-  const laneOf=s=>/UCAS|Common App|OUAC|Non-JUPAS|递交|文书|PS |申请|选校|推荐信|ED\/EA|直申/.test(s)?"l3"
+  const laneOf=s=>/UCAS|Common App|OUAC|Non-JUPAS|递交|文书|PS |申请|选校|推荐信|ED\/EA|直申|组面|Offer/.test(s)?"l3"
     :/🏆|竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|模联|Kaggle|Scholastic|沃顿|WGHS|SIC|FBLA|ISEF|丘成桐|USAMO|Euclid|欧几里得|Brain Bee|NHD|EPQ|科研|夏校|作品集|CAS/.test(s)?"l2":"l1";
   const LANE_LABEL={l1:"GPA·标化",l2:"竞赛·科研",l3:"背景·申请"};
   const nodes=trackNodes(track,lastA,lastInp);
@@ -1741,7 +1772,7 @@ function run(scroll=true){
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
   if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
   if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
-  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}${targetUni.id==="hku"&&a.hkuCutoff?"HKU Non-JUPAS 采用「硬指标过线 + 组面（Group Interview）决胜」机制——当前学术分已踏穿港大门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材。":""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
   $("alertList").innerHTML=a.alerts.length
     ? a.alerts.map(x=>{const i=x.indexOf("】");return `<li><b>${x.slice(0,i+1)}</b>${x.slice(i+1)}</li>`;}).join("")
     : `<li style="border-color:var(--s2);background:color-mix(in srgb,var(--s2) 6%,transparent)"><b style="color:var(--good-text)">【交叉校验通过】</b>GPA、语言、选科三项匹配度未触发风险规则</li>`;
