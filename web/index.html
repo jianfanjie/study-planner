@@ -189,6 +189,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
             <option value="myp">IB 体系（MYP/DP · 1–7 分）</option>
             <option value="igcse">A-Level 体系（英制 · A*–E / 9–1）</option>
             <option value="us">AP 体系（美制 · A–F / GPA）</option>
+            <option value="explore">初中探索期（G7–G9 体系未定 / 体制内转轨）</option>
           </select>
         </div>
         <div>
@@ -523,7 +524,28 @@ function renderSubjectInputs(){
     ? "⚙ A-Level 大考/预估等级将自动折算为等效 GPA 参与 AI 计算：A* = 4.0 · A = 4.0 · B = 3.0 · C = 2.0（通道 A）；填写校内 GPA 则优先采用（通道 B）"
     : sys==="myp"
     ? "⚙ 未填 GPA 时，IB 各组分数将动态映射为 4.0 制（估算 DP 总分 → GPA，HL 配比参与校准）"
+    : sys==="explore"
+    ? "⚙ 探索期评估基石：校内综合 GPA / 百分制均分 + 英语标化（小托福/托福/雅思）+ MAP 三项——引擎将输出体系分流推荐，并在 G9 Term 3 设《体系定线决策报告》节点"
     : "⚙ 未填 GPA 时由 AP 课堂成绩换算未加权 GPA；挑战级课程自动加权 +0.35，AP 统考 4/5 分计为硬学分实证";
+  if(sys==="explore"){
+    $("subjHint").textContent="探索期通用能力指标（体系科目无需填写；文理均分用于偏科诊断，可留空）";
+    box.innerHTML=`
+      <div class="crow al">
+        <div class="gl">理科均分<br><b>百分制</b></div>
+        <input type="number" id="exp_stem" placeholder="如 92" min="0" max="100" style="grid-column:span 2">
+      </div>
+      <div class="crow al">
+        <div class="gl">文科均分<br><b>百分制</b></div>
+        <input type="number" id="exp_hum" placeholder="如 85" min="0" max="100" style="grid-column:span 2">
+      </div>
+      <p class="hint">未来体系将由引擎依据【偏科指数 + 语言/写作基底 + 目标地区】给出 IB / A-Level / AP 分流推荐。</p>`;
+    box.querySelectorAll("input").forEach(el=>el.addEventListener("change",saveInputs));
+    const saved0=LS.get("inputs",null);
+    if(saved0&&saved0.courseState&&saved0.courseState[sys]){
+      for(const [id,v] of Object.entries(saved0.courseState[sys])) if($(id)) $(id).value=v;
+    }
+    return;
+  }
   if(sys==="myp"){
     $("subjHint").textContent="IB 六大学科组（每组：科目 + HL/SL + 1–7 分，可留空）";
     box.innerHTML=IB_GROUPS.map(g=>`
@@ -565,7 +587,7 @@ function saveInputs(){
   for(const id of INPUT_IDS) d[id]=$(id).value;
   d.courseState=d.courseState||{};
   const cs={};
-  document.querySelectorAll("#subjectInputs select").forEach(el=>{cs[el.id]=el.value;});
+  document.querySelectorAll("#subjectInputs select, #subjectInputs input").forEach(el=>{cs[el.id]=el.value;});
   d.courseState[$("gradeSystem").value]=cs;
   d._v4=1;
   LS.set("inputs",d);
@@ -607,6 +629,7 @@ $("demoBtn").addEventListener("click",()=>{
         ap_s_4:"AP Computer Science A",ap_g_4:"A",ap_e_4:"4",
         ap_s_5:"AP Microeconomics",ap_g_5:"A-",ap_e_5:"none",
         ap_s_6:"—"},
+    explore:{exp_stem:"92",exp_hum:"84"},
   }[sys];
   for(const k in DEMOS) if($(k)) $(k).value=DEMOS[k];
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
@@ -620,7 +643,12 @@ function readInput(){
   const sys=$("gradeSystem").value, grade=$("gradeLevel").value;
   /* 按体系读取真实课程结构 → 归一化 courses */
   const courses=[];
-  if(sys==="myp"){
+  if(sys==="explore"){
+    const pctIdx=v=>clamp(interp([[50,35],[60,45],[70,60],[80,75],[85,82],[90,88],[95,94],[100,98]],v),0,100);
+    const st=parseFloat(($("exp_stem")||{}).value), hu=parseFloat(($("exp_hum")||{}).value);
+    if(!isNaN(st)) courses.push({name:"理科均分（校内百分制）",subj:"理科均分",group:"science",hl:false,raw:String(st),index:r1(pctIdx(st))});
+    if(!isNaN(hu)) courses.push({name:"文科均分（校内百分制）",subj:"文科均分",group:"humanity",hl:false,raw:String(hu),index:r1(pctIdx(hu))});
+  } else if(sys==="myp"){
     for(const g of IB_GROUPS){
       const subj=$(`ib_s_${g.g}`).value, lvl=$(`ib_l_${g.g}`).value, sc=$(`ib_v_${g.g}`).value;
       if(!sc) continue;
@@ -701,7 +729,10 @@ function analyze(inp,uni){
     gpa4=clamp(gv/parseFloat(inp.gpaScale)*4.0,0,4.0);
     gpaNote=`通道 B：校内 Transcript GPA ${gv}/${inp.gpaScale} → 标准化 ${gpa4.toFixed(2)}/4.0`;
   } else if(present.length){
-    if(inp.sys==="igcse"){
+    if(inp.sys==="explore"){
+      gpa4=clamp(interp([[60,2.0],[70,2.6],[80,3.2],[85,3.5],[90,3.8],[95,4.0],[100,4.0]],mean(present.map(c=>parseFloat(c.raw)||70))),0,4.0);
+      gpaNote=`探索期：由校内百分制均分估算 GPA ${gpa4.toFixed(2)}/4.0`;
+    } else if(inp.sys==="igcse"){
       gpa4=clamp(mean(present.map(c=>AL_GPA[c.raw]??2.0)),0,4.0);
       gpaNote=`通道 A：${present.length} 门 A-Level 换算等效 GPA ${gpa4.toFixed(2)}/4.0（A*=4.0 · A=4.0 · B=3.0 · C=2.0）`;
     } else if(inp.sys==="myp"){
@@ -767,8 +798,15 @@ function analyze(inp,uni){
   const spread=spreadOf();
   /* A-Level 3 门达标即可申请：3 门且全 ≥B 时视为有效样本，不做“数据不足”误判 */
   const alThreeOK = inp.sys==="igcse"&&allIdx.length>=3&&Math.min(...allIdx)>=77;
-  const enoughCourses = allIdx.length>=4||alThreeOK;
-  if(allIdx.length>=4||alThreeOK){
+  const enoughCourses = allIdx.length>=4||alThreeOK||inp.sys==="explore";
+  if(inp.sys==="explore"){
+    /* 探索期分流引擎：偏科指数 + 语言/写作基底 + 目标地区 */
+    if(spread>=12) add("A-Level",2,"探索期画像：理科显著突出——A-Level 扬长避短，未来只需精修 3–4 门");
+    else if(spread<=-12) add("A-Level",1,"探索期画像：文科显著突出——A-Level 可组人文经济组合避开弱势理科");
+    if(Math.abs(spread)<8&&((mR&&mR.rit>=225)||writing>=70)) add("IB",2,"探索期画像：各科均衡 + 阅读写作基底强——适合 MYP/DP 全面发展与论文探究");
+    if(Math.abs(spread)<8&&uni.region==="us") add("AP",2,"探索期画像：均衡且目标美本——AP 自由选课灵活起步");
+    if(!factors.length) add("IB",1,"探索期：暂无显著分流信号，以均衡发展为默认假设");
+  } else if(allIdx.length>=4||alThreeOK){
     const mn=Math.min(...allIdx);
     if(alThreeOK&&allIdx.length===3) add("A-Level",1,"3 门 A-Level 全部 ≥B——精修配置已达申请有效门槛");
     if(sp>=15) add("A-Level",2,`文理分差 ${r1(sp)} 分，偏科显著——扬长避短`);
@@ -891,7 +929,8 @@ function analyze(inp,uni){
     if(ibHlN>=4&&gpa4!=null&&gpa4<3.5)
       alerts.push("【IB 难度预警】已选 4 门 HL 但 GPA 低于 3.5——学术压力过高，可能持续拖累 GPA，建议降至 3 HL 保护 GPA 稳健度");
   }
-  const advMathOK = inp.sys==="myp" ? mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)
+  const advMathOK = inp.sys==="explore" ? !!(inp.map.math&&inp.map.math.rit>=235)
+    : inp.sys==="myp" ? mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)
     : inp.sys==="igcse" ? courses.some(c=>/Further/.test(c.subj)&&c.index>=77)||mathE.some(c=>c.index>=95)
     : courses.some(c=>/Calculus BC/.test(c.subj)&&c.index>=80);
   const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!advMathOK;
@@ -1134,6 +1173,12 @@ function trackNodes(track,a,inp){
       p6:["AP 累计 5–8 门 5 分 · 常规轮补充材料"],
     },
   }[track];
+  /* 探索期通识版：G8–G9 段以通用硬实力打造为主（须在 sum0 取值前覆盖） */
+  if(inp.sys==="explore"){
+    T.p0=["词汇量冲 6000（Anki 体系化）","代数与几何地基（预备 IGCSE / Algebra I）","英文非虚构阅读：每月 1 本 + 读书笔记"];
+    T.p1=["托福冲 80 / 雅思 6.0 锚点训练",`体验课：试修 1 门 ${track==="A-Level"?"IGCSE":track==="AP"?"AP":"MYP/Pre-IB"} 课程（网课或校内）`];
+    T.p2=["标化正式出分（TOEFL 80+ / IELTS 6.0）","试学反馈复盘 + 综合画像复评"];
+  }
   /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
   const SUMMER={
     "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）","竞赛备赛：AMC12 / 物理杯"],12:["预测分冲刺复习","PS 文书初稿"]},
@@ -1143,7 +1188,9 @@ function trackNodes(track,a,inp){
   const P8=["学习习惯与时间管理体系搭建","英文原著阅读 · 词汇 3000→5000","数学衔接（Pre-Algebra → Algebra I）"];
   const sum0 = e<=9 ? T.p0 : SUMMER[track][Math.min(e,12)];
   /* 选科分水岭（Year 10 / G9 结束）——香港国际学校核心锚点 */
-  const WS={
+  const WS= inp.sys==="explore"
+    ? ["出具《体系定线决策报告》（试学反馈 + 综合画像 + 目标校匹配）","正式注册对应高中体系（IB / A-Level / AP）"]
+    : {
     "A-Level":["锁定 IGCSE 6–8 门（MAP Math ≥235 者必加选 Additional Math）","确认数理提前修读计划"],
     "IB":["锁定 MYP→DP 直升预备 + Personal Project 选题池","确认 HL 候选科目（数学 AA/AI 定向）"],
     "AP":["锁定 G10 首批 AP ≥2 门（Calculus AB/BC + 1 门理科）","确认 Honors 课表与超前自学计划"],
@@ -1157,7 +1204,7 @@ function trackNodes(track,a,inp){
   if(e<=9){
     nodes.push({stage:1,icon:"1",t:`${YR(9)} Term 1 · ${yrOf(9)}.09–12`,items:T.p1,ms:["M2"]});
     nodes.push({stage:1,icon:"2",t:`${YR(9)} Term 2–3 · ${yrOf(9)+1}.01–06`,items:[...T.p2,"选科倾向定量评估"],ms:["M3","M4"]});
-    nodes.push({stage:1,cls:"decide",icon:"⚑",t:`${yrOf(9)+1}.06 · 选科分水岭（Year 10 / G9 结束）`,tag:"核心锚点",items:WS});
+    nodes.push({stage:1,cls:"decide",icon:"⚑",t:`${yrOf(9)+1}.06 · ${inp.sys==="explore"?"体系定线核心决策期":"选科分水岭"}（Year 10 / G9 结束）`,tag:inp.sys==="explore"?"核心决策期":"核心锚点",items:WS});
   }
   if(e<=10){
     nodes.push({stage:2,icon:"3",t:`${YR(10)} 全学年 · ${yrOf(10)}.09–${decY}.06`,items:[...T.p3,...(e<=9?["1500 字学术报告 · 词汇量 10000"]:[])],ms:["M5","M6"]});
@@ -1312,7 +1359,7 @@ function run(scroll=true){
       gaps_to_target_university:a.gaps,
     },
     gpa_profile:{
-      curriculum_system:inp.sys==="myp"?"IB":inp.sys==="igcse"?"A-Level":"AP",
+      curriculum_system:inp.sys==="myp"?"IB":inp.sys==="igcse"?"A-Level":inp.sys==="us"?"AP":"探索期（未定体系）",
       equivalent_gpa_4:a.gpa4!=null?+a.gpa4.toFixed(2):null,
       weighted_gpa:a.gpaWeighted!=null?+a.gpaWeighted.toFixed(2):null,
       ib_predicted_45:a.ibEst45??undefined,
@@ -1323,7 +1370,7 @@ function run(scroll=true){
     },
     cross_alerts:a.alerts,
     course_profile:{
-      curriculum_system:inp.sys==="myp"?"IB (MYP/DP)":inp.sys==="igcse"?"A-Level":"AP",
+      curriculum_system:inp.sys==="myp"?"IB (MYP/DP)":inp.sys==="igcse"?"A-Level":inp.sys==="us"?"AP":"探索期（通用指标）",
       courses:inp.courses.map(c=>({subject:c.subj,level:inp.sys==="myp"?(c.hl?"HL":"SL"):undefined,
         grade:c.raw??undefined,ap_exam_score:c.apExam??undefined,group:c.group,index:c.index})),
     },
