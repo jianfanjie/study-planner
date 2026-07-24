@@ -561,14 +561,27 @@ const hadSaved=restoreInputs();
 updateCountdown();
 
 $("demoBtn").addEventListener("click",()=>{
-  $("gradeSystem").value="myp"; renderSubjectInputs();
-  const demo={ib_s_1:"Chinese A: Lang & Lit",ib_l_1:"SL",ib_v_1:"6",
-              ib_s_2:"English B",ib_l_2:"HL",ib_v_2:"5",
-              ib_s_3:"Economics",ib_l_3:"HL",ib_v_3:"6",
-              ib_s_4:"Physics",ib_l_4:"HL",ib_v_4:"6",
-              ib_s_5:"Math AA（分析与方法）",ib_l_5:"HL",ib_v_5:"6",
-              ib_s_6:"Visual Arts",ib_l_6:"SL",ib_v_6:"6"};
-  for(const k in demo) $(k).value=demo[k];
+  const sys=$("gradeSystem").value;          /* 按当前体系填充对应示例 */
+  renderSubjectInputs();
+  const DEMOS={
+    myp:{ib_s_1:"Chinese A: Lang & Lit",ib_l_1:"SL",ib_v_1:"6",
+         ib_s_2:"English B",ib_l_2:"HL",ib_v_2:"5",
+         ib_s_3:"Economics",ib_l_3:"HL",ib_v_3:"6",
+         ib_s_4:"Physics",ib_l_4:"HL",ib_v_4:"6",
+         ib_s_5:"Math AA（分析与方法）",ib_l_5:"HL",ib_v_5:"6",
+         ib_s_6:"Visual Arts",ib_l_6:"SL",ib_v_6:"6"},
+    igcse:{al_s_1:"Mathematics（基础数学）",al_v_1:"A*",
+           al_s_2:"Further Mathematics（进阶数学）",al_v_2:"A",
+           al_s_3:"Physics",al_v_3:"A",
+           al_s_4:"—"},
+    us:{ap_s_1:"AP Calculus BC",ap_g_1:"A",ap_e_1:"5",
+        ap_s_2:"AP Physics C: Mechanics",ap_g_2:"A-",ap_e_2:"4",
+        ap_s_3:"AP Chemistry",ap_g_3:"B+",ap_e_3:"none",
+        ap_s_4:"AP Computer Science A",ap_g_4:"A",ap_e_4:"4",
+        ap_s_5:"AP Microeconomics",ap_g_5:"A-",ap_e_5:"none",
+        ap_s_6:"—"},
+  }[sys];
+  for(const k in DEMOS) if($(k)) $(k).value=DEMOS[k];
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
   $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
