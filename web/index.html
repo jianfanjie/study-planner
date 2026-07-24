@@ -293,6 +293,39 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
       </div>
+      <div class="sec">❺ 活动与奖项档案（可选——直接影响软实力维度与美本概率）</div>
+      <div class="grid3">
+        <div>
+          <label for="compAward">竞赛最高奖项</label>
+          <select id="compAward">
+            <option value="">未填写</option>
+            <option value="none">暂无</option>
+            <option value="school">校级奖项</option>
+            <option value="national">国家 / 区域级奖项</option>
+            <option value="intl">国际级（AIME / John Locke 入围等）</option>
+          </select>
+        </div>
+        <div>
+          <label for="leadership">领导力 / 活动</label>
+          <select id="leadership">
+            <option value="">未填写</option>
+            <option value="none">暂无</option>
+            <option value="member">社团成员 / 常规活动</option>
+            <option value="leader">创始人 / 队长 / 学生会</option>
+            <option value="impact">有量化影响力的长期项目</option>
+          </select>
+        </div>
+        <div>
+          <label for="research">科研 / 产出</label>
+          <select id="research">
+            <option value="">未填写</option>
+            <option value="none">暂无</option>
+            <option value="course">课程级项目</option>
+            <option value="mentored">导师制科研 / 夏校（有产出）</option>
+            <option value="published">发表 / 获奖级产出</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
   <div class="btnrow">
@@ -491,9 +524,25 @@ const IB_GROUP_MAP=(g,subj)=>
 const AL_SUBJECTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics（物理）","Chemistry（化学）","Biology（生物）","Economics（经济）","Business（商科）","Computer Science（计算机科学）","Psychology（心理学）","History（历史）","Geography（地理）","English Literature（英国文学）","Art & Design（艺术与设计）"];
 const AL_DEFAULTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics（物理）","—"];
 const AL_GROUP=s=>/Mathematics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art/.test(s)?"arts":"humanity";
-const AP_SUBJECTS=["AP Calculus BC（微积分 BC）","AP Calculus AB（微积分 AB）","AP Statistics（统计学）","AP Physics C: Mechanics（物理 C·力学）","AP Physics 1（物理 1）","AP Chemistry（化学）","AP Biology（生物）","AP Microeconomics（微观经济）","AP Macroeconomics（宏观经济）","AP Psychology（心理学）","AP Computer Science A（计算机科学 A）","AP English Language（英语语言与写作）","AP World History（世界历史）","AP Art History（艺术史）"];
+/* College Board 官方 AP 全目录（按七大类分组） */
+const AP_CATALOG=[
+  {g:"📐 数学与计算机 Math & CS",items:["AP Calculus BC（微积分 BC）","AP Calculus AB（微积分 AB）","AP Precalculus（预备微积分）","AP Statistics（统计学）","AP Computer Science A（计算机科学 A）","AP Computer Science Principles（计算机科学原理）"]},
+  {g:"🔬 自然科学 Sciences",items:["AP Physics C: Mechanics（物理 C·力学）","AP Physics C: E&M（物理 C·电磁学）","AP Physics 1（物理 1）","AP Physics 2（物理 2）","AP Chemistry（化学）","AP Biology（生物）","AP Environmental Science（环境科学）"]},
+  {g:"✍️ 英语 English",items:["AP English Language（英语语言与写作）","AP English Literature（英语文学与写作）"]},
+  {g:"🏛 历史与社科 History & Social",items:["AP World History: Modern（世界现代史）","AP US History（美国历史）","AP European History（欧洲史）","AP US Government（美国政府与政治）","AP Comparative Government（比较政府与政治）","AP Human Geography（人文地理）","AP Psychology（心理学）","AP Microeconomics（微观经济）","AP Macroeconomics（宏观经济）","AP African American Studies（非裔美国人研究）"]},
+  {g:"🌍 世界语言 Languages",items:["AP Chinese（中文语言与文化）","AP Spanish Language（西班牙语语言与文化）","AP Spanish Literature（西班牙语文学）","AP French Language（法语语言与文化）","AP German Language（德语语言与文化）","AP Italian Language（意大利语语言与文化）","AP Japanese（日语语言与文化）","AP Latin（拉丁语）"]},
+  {g:"🎨 艺术 Arts",items:["AP Art History（艺术史）","AP Music Theory（乐理）","AP 2-D Art & Design（二维艺术设计）","AP 3-D Art & Design（三维艺术设计）","AP Drawing（绘画）"]},
+  {g:"🎓 顶石课程 Capstone",items:["AP Seminar（研讨课）","AP Research（独立研究）"]},
+];
+const AP_SUBJECTS=AP_CATALOG.flatMap(c=>c.items);
 const AP_DEFAULTS=["AP Calculus BC（微积分 BC）","AP Physics C: Mechanics（物理 C·力学）","AP Chemistry（化学）","AP Computer Science A（计算机科学 A）","AP Microeconomics（微观经济）","—"];
-const AP_GROUP=s=>/Calculus|Statistics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art History/.test(s)?"arts":"humanity";
+const apOpts=sel=>AP_CATALOG.map(c=>`<optgroup label="${c.g}">`+c.items.map(o=>`<option value="${o}" ${o===sel?"selected":""}>${o}</option>`).join("")+`</optgroup>`).join("");
+const AP_GROUP=s=>/Calculus|Statistics|Precalculus/.test(s)?"math"
+  :/Physics|Chemistry|Biology|Computer|Environmental/.test(s)?"science"
+  :/English/.test(s)?"language_en"
+  :/Art History|Music|Art & Design|Drawing/.test(s)?"arts"
+  :/Chinese|Spanish|French|German|Italian|Japanese|Latin/.test(s)?"language_other"
+  :"humanity";
 const GRADE_INDEX={
   myp:{"7":95,"6":85,"5":72,"4":60,"3":48,"2":36,"1":25},
   igcse:{"A*":95,"A":87,"B":77,"C":67,"D":57,"E":47,"9":96,"8":90,"7":84,"6":74,"5":64,"4":56,"3":48,"2":40,"1":32},
@@ -588,7 +637,7 @@ function renderSubjectInputs(){
     box.innerHTML=[1,2,3,4,5,6].map(i=>`
       <div class="crow">
         <div class="gl">AP ${i}</div>
-        <select id="ap_s_${i}"><option value="—">— 不选</option>${opt(AP_SUBJECTS,AP_DEFAULTS[i-1]==="—"?null:AP_DEFAULTS[i-1])}</select>
+        <select id="ap_s_${i}"><option value="—">— 不选</option>${apOpts(AP_DEFAULTS[i-1]==="—"?null:AP_DEFAULTS[i-1])}</select>
         <select id="ap_e_${i}"><option value="none">统考 —</option>${[5,4,3,2,1].map(v=>`<option value="${v}">${v} 分</option>`).join("")}</select>
         <select id="ap_g_${i}"><option value="">课程等级 —</option>${["A+","A","A-","B+","B","B-","C+","C"].map(v=>`<option value="${v}">${v}</option>`).join("")}</select>
       </div>`).join("");
@@ -600,7 +649,7 @@ function renderSubjectInputs(){
     for(const [id,v] of Object.entries(saved.courseState[sys])) if($(id)) $(id).value=v;
   }
 }
-const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
+const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","compAward","leadership","research"];
 function saveInputs(){
   const d=LS.get("inputs",{})||{};
   for(const id of INPUT_IDS) d[id]=$(id).value;
@@ -654,6 +703,7 @@ $("demoBtn").addEventListener("click",()=>{
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
   $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
+  $("compAward").value="national"; $("leadership").value="leader"; $("research").value="mentored";
   saveInputs();
 });
 
@@ -704,6 +754,7 @@ function readInput(){
   }
   return {sys,grade,courses,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
           schoolTier:$("schoolTier").value,
+          compAward:$("compAward").value,leadership:$("leadership").value,research:$("research").value,
           gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
 }
 
@@ -789,7 +840,11 @@ function analyze(inp,uni){
     if(inp.schoolTier!=="t2") gpaNote+=`；${TIER_LABEL[inp.schoolTier]}含金量校准 ${TIER_ADJ[inp.schoolTier]>0?"+":""}${TIER_ADJ[inp.schoolTier]}`;
   }
   const gpaHard = gpaIdx!=null ? r1(allIdx.length? gpaIdx*0.6+mean(allIdx)*0.4 : gpaIdx) : (allIdx.length? r1(mean(allIdx)) : 50);
-  const soft=clamp(52+(inp.gpaTrend==="rising"?5:inp.gpaTrend==="declining"?-6:0)+(inp.rigor==="challenge"?5:0),0,100);
+  /* 软实力：活动与奖项档案（真实数据）优先；未填写时退回代理估算 */
+  const ACT_W={school:8,national:16,intl:24}, LEAD_W={member:6,leader:13,impact:18}, RES_W={course:6,mentored:14,published:20};
+  const actFilled=[inp.compAward,inp.leadership,inp.research].some(v=>v);
+  const actScore=(ACT_W[inp.compAward]||0)+(LEAD_W[inp.leadership]||0)+(RES_W[inp.research]||0);
+  const soft=clamp((actFilled?40+actScore:52)+(inp.gpaTrend==="rising"?4:inp.gpaTrend==="declining"?-5:0)+(inp.rigor==="challenge"?4:0),0,100);
 
   /* 新五维：GPA硬实力 · 标化语言 · 学科深度/竞赛 · 探究与写作 · 软实力活动 */
   const current=[gpaHard,r1(langAb),r1(depth),r1((writing+inquiry)/2),r1(soft)];
@@ -973,6 +1028,8 @@ function analyze(inp,uni){
     : courses.some(c=>/Calculus BC/.test(c.subj)&&c.index>=80);
   const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!advMathOK;
   if(needAdvMath&&!ibGate) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
+  if(selRegions.has("us")&&actFilled&&actScore===0) alerts.push("【软背景预警】目标含美本，但竞赛/活动/科研档案均为「暂无」——综合评价体系下概率将被显著压制，建议立即立项 1 个长期活动 + 报名 1 项竞赛");
+  if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写活动与奖项档案——当前美本概率按保守代理值估算，补录后将重新校准");
 
   /* MAP 百分位诊断文本 */
   const mapAnalysis = (mM||mR||mL) ? [
@@ -1019,9 +1076,13 @@ function analyze(inp,uni){
   if(inp.map.math&&inp.map.math.pct>=85) strengths.push(`MAP 数学第 ${inp.map.math.pct} 百分位`);
   if(engIdx!=null&&engIdx>=78) strengths.push("学术英语已达高阶阅读门槛");
   if(alStemSig) strengths.push("进阶数学/物理 A*-A——申港/申英理工申请核心强信号");
+  if(inp.compAward==="intl") strengths.push("国际级竞赛奖项——美本/牛剑面试的核心叙事素材");
+  else if(inp.compAward==="national") strengths.push("国家/区域级竞赛奖项——软背景已具备骨架");
+  if(inp.research==="published") strengths.push("发表/获奖级科研产出——申请材料中的稀缺项");
+  if(inp.leadership==="impact") strengths.push("有量化影响力的长期活动——综合评价体系的高权重素材");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,reqEff,majorBand,msBoost,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
+  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -1415,6 +1476,12 @@ function run(scroll=true){
       conversion_note:a.gpaNote||"未提供数据",
     },
     cross_alerts:a.alerts,
+    activity_profile:{
+      competition:{"":"未填写",none:"暂无",school:"校级",national:"国家/区域级",intl:"国际级"}[inp.compAward],
+      leadership:{"":"未填写",none:"暂无",member:"社团成员",leader:"创始人/队长/学生会",impact:"量化影响力长期项目"}[inp.leadership],
+      research:{"":"未填写",none:"暂无",course:"课程级",mentored:"导师制科研/夏校",published:"发表/获奖级"}[inp.research],
+      activity_score:a.actFilled?a.actScore:"未评估（用代理值）",
+    },
     course_profile:{
       curriculum_system:inp.sys==="myp"?"IB (MYP/DP)":inp.sys==="igcse"?"A-Level":inp.sys==="us"?"AP":"探索期（通用指标）",
       courses:inp.courses.map(c=>({subject:c.subj,level:inp.sys==="myp"?(c.hl?"HL":"SL"):undefined,
