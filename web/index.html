@@ -136,8 +136,18 @@ details.raw{margin-top:6px}
 details.raw summary{font-size:12px;color:var(--muted);cursor:pointer}
 pre.json{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:11.5px;overflow-x:auto;max-height:340px;margin-top:8px}
 #alPgLine:not(:empty){display:inline-block;font-size:12px;font-weight:600;color:var(--good-text);border:1.5px solid var(--s2);border-radius:99px;padding:3px 14px;background:color-mix(in srgb,var(--s2) 8%,transparent)}
+/* 打印/导出 PDF：强制浅色图表配色（防止深色模式下白字印白纸） */
+:root[data-print="1"]{
+  color-scheme:light;
+  --page:#ffffff; --surface:#ffffff;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --border:rgba(11,11,11,.15);
+  --s1:#2a78d6; --s2:#008300; --s6:#eb6834;
+  --good-text:#006300;
+}
 [contenteditable="true"]{outline:1.5px dashed var(--s1);outline-offset:3px;border-radius:6px;cursor:text}
 @media print{
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
   body{padding:0;background:#fff}
   .hero .countdown,#cardUni,#cardInput,#printBtn,#editBtn,#editHint,details.raw,.rtabs button:not(.active){display:none !important}
   #printHeader{display:block !important}
@@ -1416,6 +1426,19 @@ function run(scroll=true){
 }
 $("runBtn").addEventListener("click",()=>run(true));
 $("printBtn").addEventListener("click",()=>window.print());
+/* 打印时切浅色配色重绘图表（保留顾问手动编辑的文字） */
+const EDITABLE_IDS=["advisorText","actionList","aiReason","aiRisk","comboNote"];
+function reRenderForPrint(on){
+  if(on) document.documentElement.setAttribute("data-print","1");
+  else document.documentElement.removeAttribute("data-print");
+  if(lastA&&$("results").style.display==="block"){
+    const saved=editMode?EDITABLE_IDS.map(id=>[id,$(id).innerHTML]):null;
+    run(false);
+    if(saved) for(const [id,h] of saved) $(id).innerHTML=h;
+  }
+}
+window.addEventListener("beforeprint",()=>reRenderForPrint(true));
+window.addEventListener("afterprint",()=>reRenderForPrint(false));
 /* 顾问编辑模式（Human-in-the-Loop） */
 let editMode=false;
 $("editBtn").addEventListener("click",()=>{
