@@ -440,19 +440,19 @@ const ROUTE_COLOR={"A-Level":"--s1","IB":"--s2","AP":"--s6"};
 
 /* ---------- 目标大学库 ---------- */
 const UNIS=[
-  {id:"hku",  name:"香港大学 HKU",       region:"hk", rank:"QS 17 · Non-JUPAS 内卷", al:"A*AA – A*A*A", ib:"38 – 42", ap:"GPA 3.8+ / 5门AP 4-5分", req:88},
-  {id:"cuhk", name:"香港中文大学 CUHK",  region:"hk", rank:"QS 32 · Non-JUPAS", al:"A*AA",       ib:"38 – 40", ap:"GPA 3.7+ / 4门AP 4+",   req:86},
-  {id:"hkust",name:"香港科技大学 HKUST", region:"hk", rank:"QS 44", al:"AAA – A*AA",  ib:"35 – 38", ap:"GPA 3.6+ / 4门AP 4+",   req:84},
-  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2 · 仅 STEM+商科",  al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"3-4门 AP 5分（不收 SAT）",  req:92, excl:["hum","art"]},
-  {id:"oxford",  name:"牛津大学 Oxford",  region:"uk",rank:"QS 3",  al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"5门+ AP 5分 + SAT 1550",  req:93},
-  {id:"cambridge",name:"剑桥大学 Cambridge",region:"uk",rank:"QS 5",al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"5门+ AP 5分 + SAT 1550",  req:94},
-  {id:"ucl",  name:"伦敦大学学院 UCL",   region:"uk", rank:"QS 9",  al:"A*AA – ABB", ib:"36 – 39", ap:"4-5门AP 4-5分",         req:88},
-  {id:"ivy",  name:"常春藤盟校 Ivy League", region:"us", rank:"哈佛/耶鲁/普林斯顿等 8 校", al:"A*A*A* + 顶级背景", ib:"42 – 45", ap:"GPA 4.0 / 8门AP 5分 / SAT 1550+", req:95},
-  {id:"us30", name:"美国 Top 30（综合）", region:"us", rank:"US News Top 30", al:"—", ib:"预估 40+", ap:"GPA 3.9+ / 5-8门AP 5分 / SAT 1500+", req:90},
-  {id:"toronto",name:"多伦多大学 Toronto", region:"ca", rank:"QS 25", al:"AAA – AAB", ib:"33 – 40", ap:"GPA 3.8+ / 3-4门AP 4+", req:85},
-  {id:"mcgill", name:"麦吉尔大学 McGill",  region:"ca", rank:"QS 27", al:"AAB",       ib:"34 – 38", ap:"GPA 3.8+ / AP 4+",      req:84},
-  {id:"melbourne",name:"墨尔本大学 Melbourne",region:"au",rank:"QS 13",al:"AAB – AAA",ib:"36 – 40（热门专业）",ap:"3-4门AP 4+ / SAT 1350+",req:84},
-  {id:"sydney",  name:"悉尼大学 Sydney",     region:"au",rank:"QS 18",al:"ABB – AAB", ib:"33 – 38", ap:"3门AP 4+ / SAT 1300+", req:82},
+  {id:"hku",  name:"香港大学 HKU",       region:"hk", rank:"QS 17 · Non-JUPAS 内卷", al:"A*AA – A*A*A", ib:"36 – 42（热门 38+）", ap:"GPA 3.8+ / 5门AP 4-5分", req:88, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80（法·医更高）"},
+  {id:"cuhk", name:"香港中文大学 CUHK",  region:"hk", rank:"QS 32 · Non-JUPAS", al:"A*AA",       ib:"36 – 40", ap:"GPA 3.7+ / 4门AP 4+",   req:86, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80"},
+  {id:"hkust",name:"香港科技大学 HKUST", region:"hk", rank:"QS 44", al:"AAA – A*AA",  ib:"34 – 38", ap:"GPA 3.6+ / 4门AP 4+",   req:84, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80"},
+  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2 · 仅 STEM+商科",  al:"A*A*A（区间 AAA–A*A*A*）",ib:"38 – 42（多为 40+）", ap:"3-4门 AP 5分（不收 SAT）",  req:92, excl:["hum","art"], engReq:85, engLabel:"IELTS 6.5-7.0 / TOEFL 92-100"},
+  {id:"oxford",  name:"牛津大学 Oxford",  region:"uk",rank:"QS 3",  al:"AAA – A*A*A（按专业）",ib:"38 – 40（HL 766/776）", ap:"5门+ AP 5分 + SAT 1550",  req:93, engReq:90, engLabel:"IELTS 7.0-7.5 / TOEFL 100-110"},
+  {id:"cambridge",name:"剑桥大学 Cambridge",region:"uk",rank:"QS 5",al:"A*AA – A*A*A",ib:"40 – 42（HL 776）", ap:"5门+ AP 5分 + SAT 1550",  req:94, engReq:90, engLabel:"IELTS 7.5（单项 7.0）/ TOEFL 110"},
+  {id:"ucl",  name:"伦敦大学学院 UCL",   region:"uk", rank:"QS 9",  al:"A*A*A – ABB（多为 A*AA）", ib:"34 – 38", ap:"4-5门AP 4-5分",         req:88, engReq:85, engLabel:"IELTS 6.5-7.5（按专业分级）"},
+  {id:"ivy",  name:"常春藤盟校 Ivy League", region:"us", rank:"哈佛/耶鲁/普林斯顿等 8 校", al:"A*A*A* + 顶级背景", ib:"42 – 45", ap:"GPA 4.0 / 8门AP 5分 / SAT 1550+", req:95, engReq:85, engLabel:"TOEFL 100+（录取者典型 110+）"},
+  {id:"us30", name:"美国 Top 30（综合）", region:"us", rank:"US News Top 30", al:"—", ib:"预估 40+", ap:"GPA 3.9+ / 5-8门AP 5分 / SAT 1500+", req:90, engReq:85, engLabel:"TOEFL 100+"},
+  {id:"toronto",name:"多伦多大学 Toronto", region:"ca", rank:"QS 25", al:"AAA – AAB", ib:"33 – 40", ap:"GPA 3.8+ / 3-4门AP 4+", req:85, engReq:78, engLabel:"IELTS 6.5 / TOEFL 100（写作 22）"},
+  {id:"mcgill", name:"麦吉尔大学 McGill",  region:"ca", rank:"QS 27", al:"AAB",       ib:"34 – 38", ap:"GPA 3.8+ / AP 4+",      req:84, engReq:78, engLabel:"IELTS 6.5 / TOEFL 90-100"},
+  {id:"melbourne",name:"墨尔本大学 Melbourne",region:"au",rank:"QS 13",al:"AAB – AAA",ib:"36 – 40（热门专业）",ap:"3-4门AP 4+ / SAT 1350+",req:84, engReq:78, engLabel:"IELTS 6.5（部分专业写作 7.0）"},
+  {id:"sydney",  name:"悉尼大学 Sydney",     region:"au",rank:"QS 18",al:"ABB – AAB", ib:"33 – 38", ap:"3门AP 4+ / SAT 1300+", req:82, engReq:78, engLabel:"IELTS 6.5"},
 ];
 const REGION_LABEL={hk:"🇭🇰 香港（Non-JUPAS）",uk:"🇬🇧 英国（UCAS）",us:"🇺🇸 美国（Common App）",ca:"🇨🇦 加拿大（OUAC）",au:"🇦🇺 澳大利亚（直申 / ATAR 换算）"};
 /* 多校联申：最多 5 所；主对标校 = 所选中门槛最高者 */
@@ -475,6 +475,7 @@ function renderUnis(){
         <div class="u-rank">${u.rank}</div>
         <div class="u-req">AL ${u.al} ｜ IB ${u.ib}</div>
         <div class="u-req">AP ${u.ap}</div>
+        ${u.engLabel?`<div class="u-req" style="color:var(--muted)">语言 ${u.engLabel}</div>`:""}
       </div>`).join("")}</div>`).join("");
 }
 $("uniList").addEventListener("click",e=>{
@@ -1031,6 +1032,8 @@ function analyze(inp,uni){
   if(selRegions.has("us")&&actFilled&&actScore===0) alerts.push("【软背景预警】目标含美本，但竞赛/活动/科研档案均为「暂无」——综合评价体系下概率将被显著压制，建议立即立项 1 个长期活动 + 报名 1 项竞赛");
   if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写活动与奖项档案——当前美本概率按保守代理值估算，补录后将重新校准");
   if(selRegions.has("us")&&engIdx!=null&&engIdx<85) alerts.push(`【语言硬门槛预警】美本 Top 30/藤校实际录取者托福典型 110+（哥大本科最低 100；哈佛明示低于 100 视为流利度不足）——当前语言等效指数 ${r1(engIdx)}（约 TOEFL ${engIdx>=78?"90-99":"90 以下"}档），美本概率已被硬性封顶 5%，请优先将托福冲至 105+`);
+  const engMissNonUS=UNIS.filter(u=>targetUnis.includes(u.id)&&u.region!=="us"&&u.engReq&&engIdx!=null&&engIdx<u.engReq);
+  if(engMissNonUS.length) alerts.push(`【语言条件提醒】以下目标校语言线未达：${engMissNonUS.map(u=>`${u.name.split(" ")[0]}（要求 ${u.engLabel}）`).join("、")}——英联邦体系 offer 将附带语言条件，须在入学前考到，建议与大考复习并行规划`);
   /* 选校-专业适配拦截（如帝国理工无人文社科本科） */
   const mkEff=inp.major!=="undecided"?inp.major:(spread>=10?"eng":spread<=-10?"hum":"bus");
   for(const u of UNIS.filter(u=>targetUnis.includes(u.id))){
@@ -1061,12 +1064,16 @@ function analyze(inp,uni){
     au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
   };
   let probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
-  /* 美本语言硬门槛（哈佛官方口径：TOEFL <100 即存疑；录取者典型 110+）：未达线时概率封顶 5% */
-  const usLangGate = uni.region==="us"&&engIdx!=null&&engIdx<85;
+  /* 语言门槛（按各校官方线）：美本=硬拒因素封顶 5%；英港加澳=条件 offer 制封顶 35% */
+  const engLow = uni.engReq!=null&&engIdx!=null&&engIdx<uni.engReq;
+  const usLangGate = uni.region==="us"&&engLow;
   if(usLangGate) probPct=Math.min(probPct,5);
+  else if(engLow) probPct=Math.min(probPct,35);
   const prob=`≈ ${probPct}%`;
   const probSub=(usLangGate
     ? "⚠️ 语言硬门槛未达：美本 Top 30 实际要求 TOEFL 100+（录取者典型 110+）——当前概率封顶 5%，冲分后自动解锁"
+    : engLow
+    ? `⚠️ 语言未达该校线（${uni.engLabel}）——英联邦体系 offer 将附带语言条件，入学前须达标（概率暂封顶 35%）`
     : uni.region==="us"
     ? "美本为综合评价：学术达标只是入场券（概率硬性封顶 25%），活动/文书/科研软背景决定上限"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
