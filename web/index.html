@@ -646,6 +646,14 @@ function analyze(inp,uni){
   const AL_GPA={"A*":4.0,"A":4.0,"B":3.0,"C":2.0,"D":1.0,"E":0.5,"9":4.0,"8":4.0,"7":3.7,"6":3.3,"5":3.0,"4":2.3,"3":2.0,"2":1.0,"1":0.5};
   const US_GPA={"A+":4.0,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D":1.0,"F":0};
   let gpa4=null, gpaWeighted=null, gpaNote="";
+  /* IB 45 分制预估（6 科总分 + EE/TOK 核心分） */
+  let ibEst45=null, ibHlN=0, ibCore=2;
+  if(inp.sys==="myp"&&present.length){
+    ibHlN=present.filter(c=>c.hl).length;
+    const avg=mean(present.map(c=>parseFloat(c.raw)||0));
+    ibCore=avg>=6?3:2;
+    ibEst45=r1(avg*6+ibCore);
+  }
   const gv=parseFloat(inp.gpaValue);
   if(!isNaN(gv)&&gv>0){
     gpa4=clamp(gv/parseFloat(inp.gpaScale)*4.0,0,4.0);
@@ -655,10 +663,10 @@ function analyze(inp,uni){
       gpa4=clamp(mean(present.map(c=>AL_GPA[c.raw]??2.0)),0,4.0);
       gpaNote=`通道 A：${present.length} 门 A-Level 换算等效 GPA ${gpa4.toFixed(2)}/4.0（A*=4.0 · A=4.0 · B=3.0 · C=2.0）`;
     } else if(inp.sys==="myp"){
-      const hlN=present.filter(c=>c.hl).length;
-      const est45=r1(mean(present.map(c=>parseFloat(c.raw)||4))*6+2);
-      gpa4=clamp(interp([[20,2.2],[24,2.6],[28,3.0],[32,3.4],[36,3.7],[40,3.9],[43,4.0],[45,4.0]],est45),0,4.0);
-      gpaNote=`IB 动态映射：估算 DP 总分 ≈${est45}/45 → GPA ${gpa4.toFixed(2)}/4.0（HL ${hlN} 门${hlN>=3?"，配比达标含金量加权":"，HL 配比不足 3 门"}）`;
+      const IB_GPA=v=>v>=7?4.0:v>=6?3.7:v>=5?3.3:v>=4?3.0:2.0;
+      gpa4=clamp(mean(present.map(c=>IB_GPA(parseFloat(c.raw)||0))),0,4.0);
+      gpaNote=`通道 A：IB 分数逐科折算等效 GPA ${gpa4.toFixed(2)}/4.0（7=4.0 · 6=3.7 · 5=3.3 · 4=3.0）`;
+      if(ibHlN){ gpaWeighted=Math.min(gpa4+0.5,4.5); gpaNote+=`；含 ${ibHlN} 门 HL 加权后 ≈${gpaWeighted.toFixed(2)}`; }
     } else {
       const withSch=present.filter(c=>US_GPA[c.raw]!=null);
       if(withSch.length){
@@ -669,11 +677,12 @@ function analyze(inp,uni){
       if(ap45&&gpaNote) gpaNote+=`；含 ${ap45} 门 AP 统考 4/5 分硬学分实证`;
     }
   }
-  if(gpa4!=null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
+  if(gpa4!=null&&gpaWeighted==null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
+  if(inp.sys==="myp"&&ibEst45!=null) gpaNote+=(gpaNote?"；":"")+`预估 DP 总分 ≈${ibEst45}/45（6 科 ${r1(ibEst45-ibCore)}/42 + EE/TOK 核心 ${ibCore} 分）`;
   const TREND_ADJ={rising:4,stable:0,volatile:-3,declining:-7};
   const TREND_LABEL={rising:"持续上升",stable:"高位稳定",volatile:"起伏波动",declining:"呈现下滑"};
   let gpaIdx=null;
-  if(gpa4!=null) gpaIdx=clamp(interp([[2.0,40],[2.6,55],[3.0,64],[3.3,72],[3.6,80],[3.8,87],[3.9,91],[4.0,95],[4.3,98]],gpaWeighted??gpa4)+TREND_ADJ[inp.gpaTrend],0,100);
+  if(gpa4!=null) gpaIdx=clamp(interp([[2.0,40],[2.6,55],[3.0,64],[3.3,72],[3.6,80],[3.8,87],[3.9,91],[4.0,95],[4.3,98],[4.5,99]],gpaWeighted??gpa4)+TREND_ADJ[inp.gpaTrend],0,100);
   const gpaHard = gpaIdx!=null ? r1(allIdx.length? gpaIdx*0.6+mean(allIdx)*0.4 : gpaIdx) : (allIdx.length? r1(mean(allIdx)) : 50);
   const soft=clamp(52+(inp.gpaTrend==="rising"?5:inp.gpaTrend==="declining"?-6:0)+(inp.rigor==="challenge"?5:0),0,100);
 
@@ -786,11 +795,32 @@ function analyze(inp,uni){
   if(inp.gpaTrend==="volatile") alerts.push("【GPA 趋势提示】GPA 起伏波动——招生官看重成绩曲线的稳定叙事，需定位波动源（选科不当/时间管理）");
   if(gpaIdx!=null&&langAb>=78&&gpaIdx<70) alerts.push("【匹配度校准】语言标化强但 GPA 偏低——防止被贴上「刷题型/学习态度」标签，优先修复校内成绩叙事");
   if(gpaIdx!=null&&gpaIdx>=85&&langAb<70) alerts.push("【匹配度校准】GPA 高但语言滞后——提防「GPA 含金量缩水」质疑，尽快用官方标化成绩背书");
+  /* IB 专属硬性诊断（HKU/G5 真实选科门槛） */
+  let ibGate=false;
+  if(inp.sys==="myp"){
+    const g5=mathE[0];
+    const g5raw=g5?parseFloat(g5.raw)||0:0;
+    const g5ok=g5&&g5.hl&&/AA/.test(g5.subj)&&g5raw>=6;
+    if(["eng","cs"].includes(inp.major)&&(uni.region==="hk"||uni.region==="uk")&&!g5ok){
+      ibGate=true;
+      alerts.push(`【选科门槛不符预警】HKU/G5 热门工程·量化专业硬性要求 Math AA HL ≥6 分——当前${g5?`为 ${/AA/.test(g5.subj)?"Math AA":"Math AI"} ${g5.hl?"HL":"SL"} ${g5.raw} 分`:"未填写 Group 5 数学"}，选科门槛不符，需在定线前调整`);
+    }
+    if(inp.major==="bus"){
+      const econ=courses.find(c=>/Economics/.test(c.subj));
+      const mOK=g5raw>=6, eOK=econ&&econ.hl&&(parseFloat(econ.raw)||0)>=6;
+      if(!mOK||!eOK){
+        ibGate=ibGate||!mOK;
+        alerts.push(`【商科选科诊断】名校商学院要求数学（AA/AI）≥6 分（当前 ${g5?g5raw+" 分":"未填"}）并看重 Economics HL 表现（当前${econ?` ${econ.hl?"HL":"SL"} ${econ.raw} 分`:"未修"}）——${!mOK?"数学需提分至 6+；":""}${!eOK?"建议 Economics 修 HL 并冲 6+":""}`);
+      }
+    }
+    if(ibHlN>=4&&gpa4!=null&&gpa4<3.5)
+      alerts.push("【IB 难度预警】已选 4 门 HL 但 GPA 低于 3.5——学术压力过高，可能持续拖累 GPA，建议降至 3 HL 保护 GPA 稳健度");
+  }
   const advMathOK = inp.sys==="myp" ? mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)
     : inp.sys==="igcse" ? courses.some(c=>/Further/.test(c.subj)&&c.index>=77)||mathE.some(c=>c.index>=95)
     : courses.some(c=>/Calculus BC/.test(c.subj)&&c.index>=80);
   const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!advMathOK;
-  if(needAdvMath) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
+  if(needAdvMath&&!ibGate) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
 
   /* MAP 百分位诊断文本 */
   const mapAnalysis = (mM||mR||mL) ? [
@@ -826,7 +856,7 @@ function analyze(inp,uni){
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
   return {current,reqProfile,route,alt,confidence,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall,level,gaps,strengths,spread,range,
-          gpa4,gpaWeighted,gpaNote,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
+          gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
 
@@ -1166,6 +1196,8 @@ function run(scroll=true){
       curriculum_system:inp.sys==="myp"?"IB":inp.sys==="igcse"?"A-Level":"AP",
       equivalent_gpa_4:a.gpa4!=null?+a.gpa4.toFixed(2):null,
       weighted_gpa:a.gpaWeighted!=null?+a.gpaWeighted.toFixed(2):null,
+      ib_predicted_45:a.ibEst45??undefined,
+      ib_hl_count:inp.sys==="myp"?a.ibHlN:undefined,
       trend:a.trendLabel, rigor:inp.rigor==="challenge"?"挑战级":"标准级",
       conversion_note:a.gpaNote||"未提供数据",
     },
