@@ -135,13 +135,17 @@ svg{max-width:100%;height:auto}
 details.raw{margin-top:6px}
 details.raw summary{font-size:12px;color:var(--muted);cursor:pointer}
 pre.json{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:11.5px;overflow-x:auto;max-height:340px;margin-top:8px}
+#alPgLine:not(:empty){display:inline-block;font-size:12px;font-weight:600;color:var(--good-text);border:1.5px solid var(--s2);border-radius:99px;padding:3px 14px;background:color-mix(in srgb,var(--s2) 8%,transparent)}
+[contenteditable="true"]{outline:1.5px dashed var(--s1);outline-offset:3px;border-radius:6px;cursor:text}
 @media print{
   body{padding:0;background:#fff}
-  .hero .countdown,#cardUni,#cardInput,#printBtn,details.raw,.rtabs button:not(.active){display:none !important}
+  .hero .countdown,#cardUni,#cardInput,#printBtn,#editBtn,#editHint,details.raw,.rtabs button:not(.active){display:none !important}
   #printHeader{display:block !important}
-  .card{break-inside:avoid;box-shadow:none}
+  .card,.vcard,.node,.bar-row,.combo{page-break-inside:avoid;break-inside:avoid}
+  .card{box-shadow:none}
   .ai{border-width:1.5px}
   .node{padding-bottom:10px}
+  [contenteditable="true"]{outline:none}
 }
 </style>
 </head>
@@ -158,7 +162,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 
 <!-- ① 目标大学 -->
 <div class="card" id="cardUni">
-  <h2><span class="step">1</span>选择目标大学</h2>
+  <h2><span class="step">1</span>选择目标大学 <span style="font-weight:400;font-size:12px;color:var(--muted)">（可多选联申，最多 5 所；达标度按最高门槛校折算）</span></h2>
   <div id="uniList"></div>
 </div>
 
@@ -179,12 +183,20 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
             <option value="G12">高三 G12（Year 13）</option>
           </select>
         </div>
-        <div style="grid-column:span 2">
+        <div>
           <label for="gradeSystem">课程体系</label>
           <select id="gradeSystem">
             <option value="myp">IB 体系（MYP/DP · 1–7 分）</option>
             <option value="igcse">A-Level 体系（英制 · A*–E / 9–1）</option>
             <option value="us">AP 体系（美制 · A–F / GPA）</option>
+          </select>
+        </div>
+        <div>
+          <label for="schoolTier">学校梯队（School Profile）</label>
+          <select id="schoolTier">
+            <option value="t1">Tier 1 顶尖国际校</option>
+            <option value="t2" selected>Tier 2 主流国际校</option>
+            <option value="t3">Tier 3 一般国际部</option>
           </select>
         </div>
       </div>
@@ -322,7 +334,8 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
       <div class="gauge-sub" id="probSub"></div>
       <div class="gauge-sub" id="levelLine" style="margin-top:12px;font-size:12.5px;color:var(--ink-2)"></div>
       <div class="gauge-sub" id="gpaLine" style="margin-top:8px;font-size:12px;text-align:left"></div>
-      <div class="gauge-sub" id="alPgLine" style="margin-top:6px;font-size:12px;text-align:left;color:var(--good-text)"></div>
+      <div id="alPgLine" style="margin-top:8px"></div>
+      <div id="multiProb" style="margin-top:10px;font-size:12px;text-align:left"></div>
     </div>
   </div>
 
@@ -334,7 +347,10 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 
   <!-- 顾问总评 -->
   <div class="card">
-    <h2>📋 顾问总评与交叉预警</h2>
+    <h2 style="display:flex;align-items:center">📋 顾问总评与交叉预警
+      <button class="btn" id="editBtn" style="margin-left:auto;font-size:12px;padding:4px 14px">✏️ 顾问编辑模式</button>
+    </h2>
+    <p class="hint" id="editHint" style="display:none;margin-bottom:8px">编辑模式已开启——直接点击总评、行动清单、推荐理由、风险预警的文字即可修改；改完点「完成编辑」再导出 PDF。注意：重新点「生成规划」会覆盖手动修改。</p>
     <ul class="alerts" id="alertList"></ul>
     <p style="font-size:13px;color:var(--ink-2);line-height:1.7" id="advisorText"></p>
     <h3 style="font-size:13px;font-weight:700;margin:12px 0 6px">近 90 天行动清单</h3>
@@ -386,7 +402,14 @@ const UNIS=[
   {id:"sydney",  name:"悉尼大学 Sydney",     region:"au",rank:"QS 18",al:"ABB – AAB", ib:"33 – 38", ap:"3门AP 4+ / SAT 1300+", req:82},
 ];
 const REGION_LABEL={hk:"🇭🇰 香港（Non-JUPAS）",uk:"🇬🇧 英国（UCAS）",us:"🇺🇸 美国（Common App）",ca:"🇨🇦 加拿大（OUAC）",au:"🇦🇺 澳大利亚（直申 / ATAR 换算）"};
-let targetUni = UNIS.find(u=>u.id===LS.get("targetUni","hku")) || UNIS[0];
+/* 多校联申：最多 5 所；主对标校 = 所选中门槛最高者 */
+let targetUnis = LS.get("targetUnis",null) || [LS.get("targetUni","hku")];
+targetUnis = targetUnis.filter(id=>UNIS.some(u=>u.id===id));
+if(!targetUnis.length) targetUnis=["hku"];
+let targetUni;
+function refreshPrimary(){ targetUni=UNIS.filter(u=>targetUnis.includes(u.id)).sort((a,b)=>b.req-a.req)[0]||UNIS[0]; }
+refreshPrimary();
+const heroUniText=()=>targetUnis.length>1?`${targetUni.name}（+${targetUnis.length-1} 校联申）`:targetUni.name;
 
 function renderUnis(){
   const groups={hk:[],uk:[],us:[],ca:[],au:[]};
@@ -394,7 +417,7 @@ function renderUnis(){
   $("uniList").innerHTML=Object.entries(groups).map(([rg,list])=>
     `<div class="uni-region">${REGION_LABEL[rg]}</div>
      <div class="uni-grid">${list.map(u=>`
-      <div class="uni ${u.id===targetUni.id?"sel":""}" data-uni="${u.id}">
+      <div class="uni ${targetUnis.includes(u.id)?"sel":""}" data-uni="${u.id}">
         <div class="u-name">${u.name}</div>
         <div class="u-rank">${u.rank}</div>
         <div class="u-req">AL ${u.al} ｜ IB ${u.ib}</div>
@@ -403,14 +426,17 @@ function renderUnis(){
 }
 $("uniList").addEventListener("click",e=>{
   const el=e.target.closest(".uni"); if(!el) return;
-  targetUni=UNIS.find(u=>u.id===el.dataset.uni);
-  LS.set("targetUni",targetUni.id);
+  const id=el.dataset.uni;
+  if(targetUnis.includes(id)){ if(targetUnis.length>1) targetUnis=targetUnis.filter(x=>x!==id); }
+  else { if(targetUnis.length>=5){ alert("联申最多选择 5 所目标校"); return; } targetUnis.push(id); }
+  LS.set("targetUnis",targetUnis);
+  refreshPrimary();
   renderUnis();
-  $("heroUni").textContent=targetUni.name;
+  $("heroUni").textContent=heroUniText();
   if($("results").style.display==="block") run(false);
 });
 renderUnis();
-$("heroUni").textContent=targetUni.name;
+$("heroUni").textContent=heroUniText();
 
 /* 定线/申请倒计时（按升入年级动态计算） */
 function updateCountdown(){
@@ -533,7 +559,7 @@ function renderSubjectInputs(){
     for(const [id,v] of Object.entries(saved.courseState[sys])) if($(id)) $(id).value=v;
   }
 }
-const INPUT_IDS=["gradeLevel","gradeSystem","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
+const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
 function saveInputs(){
   const d=LS.get("inputs",{})||{};
   for(const id of INPUT_IDS) d[id]=$(id).value;
@@ -630,6 +656,7 @@ function readInput(){
     if(!isNaN(v)) map[dim]={rit:v,pct:mapPct(v,dim,grade)};
   }
   return {sys,grade,courses,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
+          schoolTier:$("schoolTier").value,
           gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
 }
 
@@ -704,7 +731,13 @@ function analyze(inp,uni){
   const TREND_ADJ={rising:4,stable:0,volatile:-3,declining:-7};
   const TREND_LABEL={rising:"持续上升",stable:"高位稳定",volatile:"起伏波动",declining:"呈现下滑"};
   let gpaIdx=null;
-  if(gpa4!=null) gpaIdx=clamp(interp([[2.0,40],[2.6,55],[3.0,64],[3.3,72],[3.6,80],[3.8,87],[3.9,91],[4.0,95],[4.3,98],[4.5,99]],gpaWeighted??gpa4)+TREND_ADJ[inp.gpaTrend],0,100);
+  /* School Profile：学校梯队含金量校准（Tier1 +4 / Tier3 -5） */
+  const TIER_ADJ={t1:4,t2:0,t3:-5};
+  const TIER_LABEL={t1:"Tier 1 顶尖国际校",t2:"Tier 2 主流国际校",t3:"Tier 3 一般国际部"};
+  if(gpa4!=null){
+    gpaIdx=clamp(interp([[2.0,40],[2.6,55],[3.0,64],[3.3,72],[3.6,80],[3.8,87],[3.9,91],[4.0,95],[4.3,98],[4.5,99]],gpaWeighted??gpa4)+TREND_ADJ[inp.gpaTrend]+(TIER_ADJ[inp.schoolTier]||0),0,100);
+    if(inp.schoolTier!=="t2") gpaNote+=`；${TIER_LABEL[inp.schoolTier]}含金量校准 ${TIER_ADJ[inp.schoolTier]>0?"+":""}${TIER_ADJ[inp.schoolTier]}`;
+  }
   const gpaHard = gpaIdx!=null ? r1(allIdx.length? gpaIdx*0.6+mean(allIdx)*0.4 : gpaIdx) : (allIdx.length? r1(mean(allIdx)) : 50);
   const soft=clamp(52+(inp.gpaTrend==="rising"?5:inp.gpaTrend==="declining"?-6:0)+(inp.rigor==="challenge"?5:0),0,100);
 
@@ -718,7 +751,12 @@ function analyze(inp,uni){
   const overallBase=baseParts.length?r1(mean(baseParts)):overall;
 
   const na=uni.region==="us"||uni.region==="ca";   // 北美：GPA+广度评估模型
-  const k=uni.req/(na?90:93);
+  /* 专业级门槛修正：同一大学不同专业的真实录取线差异 */
+  const MAJOR_ADJ={undecided:0,eng:2,cs:3,bus:3,med:5,hum:-2,art:-4};
+  const MAJOR_BAND={eng:"工程：IB 38-40+ / A*AA–A*A*A 档",cs:"计算机：IB 40+ / A*A*A 档",bus:"商科/量化：IB 40+ / A*A*A 档",med:"医学：IB 42+ / A*A*A + UCAT 档",hum:"人文社科：IB 36+ / A*AA 档",art:"艺术：作品集主导，学术线下调",undecided:""};
+  const reqEff=clamp(uni.req+(MAJOR_ADJ[inp.major]||0),60,99);
+  const majorBand=MAJOR_BAND[inp.major]||"";
+  const k=reqEff/(na?90:93);
   const reqProfile=(na?[93,90,82,88,90]:[93,90,93,78,68]).map(v=>r1(clamp(v*k,0,100)));
 
   /* ===== 三轨判定算法 ===== */
@@ -867,11 +905,13 @@ function analyze(inp,uni){
   ].filter(Boolean).join("；") : "未提供 MAP 数据——建议 3 个月内补测，校准学术潜力基线";
 
   /* 达标度与概率 */
-  const score=na
-    ? clamp(gpaHard*0.35+langAb*0.25+((writing+inquiry)/2)*0.2+soft*0.2,0,100)
-    : clamp(depth*0.45+gpaHard*0.3+langAb*0.25+(alStemSig?3:0),0,100);
-  const readiness=r1(clamp(score/uni.req*100,0,100));
-  const ratio=score/uni.req;
+  const msDone=Object.keys(LS.get("milestones",{})).length;
+  const msBoost=Math.min(msDone*0.8,6);   /* 里程碑达成 → 实时上调评估 */
+  const score=clamp((na
+    ? gpaHard*0.35+langAb*0.25+((writing+inquiry)/2)*0.2+soft*0.2
+    : depth*0.45+gpaHard*0.3+langAb*0.25+(alStemSig?3:0))+msBoost,0,100);
+  const readiness=r1(clamp(score/reqEff*100,0,100));
+  const ratio=score/reqEff;
   /* BUG2 修复：概率按申请地区分曲线折算——美本综合评价封顶 25%，英港学术硬指标导向可达 55–70% */
   const PROB_CURVE={
     us:[[0.70,3],[0.85,8],[0.95,15],[1.00,20],[1.10,25]],
@@ -887,7 +927,7 @@ function analyze(inp,uni){
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
     : probPct>=30?"有差距，2 年窗口内可弥合"
     : "地基期，概率随里程碑达成动态上修")
-    +`（按 ${uni.name.split(" ")[0]}准入线 ${uni.req} 折算）`;
+    +`（按 ${uni.name.split(" ")[0]}${MAJORS[inp.major]&&inp.major!=="undecided"?"·"+MAJORS[inp.major]:""}门槛指数 ${reqEff} 折算）`;
   let level;
   if(overallBase>=85)level="卓越梯队 Tier 1";else if(overallBase>=75)level="优秀梯队 Tier 2";else if(overallBase>=63)level="潜力梯队 Tier 3";else level="地基构筑期 Tier 4";
 
@@ -904,7 +944,7 @@ function analyze(inp,uni){
   if(alStemSig) strengths.push("进阶数学/物理 A*-A——申港/申英理工申请核心强信号");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
+  return {current,reqProfile,reqEff,majorBand,msBoost,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -962,11 +1002,11 @@ function drawRadar(current,req){
   svg.append(l1,t1,l2,t2);
 }
 /* ---------- 科目条 ---------- */
-function drawBars(inp,uni){
+function drawBars(inp,uni,reqEff){
   const rows=[];
   for(const c of inp.courses){
     const core=["math","science","language_en"].includes(c.group);
-    const target=core?uni.req:75;
+    const target=core?(reqEff||uni.req):75;
     const ok=c.index>=target;
     const label=inp.sys==="myp"?`${c.subj.replace(/（.*）/,"")}·${c.hl?"HL":"SL"}`:c.subj.replace(/（.*）/,"").replace(/^AP /,"");
     rows.push(`<div class="bar-row">
@@ -978,7 +1018,7 @@ function drawBars(inp,uni){
   $("subjectBars").innerHTML=rows.join("")||'<p class="hint">未输入课程成绩</p>';
   const lowGrade=(GRADE_NUM[inp.grade]||9)<=10;
   const advCourses=inp.sys!=="myp"?inp.courses.length>0:inp.courses.some(c=>c.hl);
-  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数（IB 的 HL 含 +3 难度加成，AP 统考分按 40% 权重融合）；核心科目（数学/科学/英语）要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，其余 75。`
+  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数（IB 的 HL 含 +3 难度加成，AP 统考分按 40% 权重融合）；核心科目（数学/科学/英语）要求线 = ${uni.name.split(" ")[0]}门槛指数 ${reqEff||uni.req}，其余 75。`
     +(lowGrade&&advCourses?"　（注：G10–G11 拟修/预估科目进阶推断）":"");
 }
 
@@ -1009,6 +1049,8 @@ document.addEventListener("change",e=>{
   LS.set("milestones",done);
   cb.closest(".ms-chip").classList.toggle("done",cb.checked);
   updateMsProgress();
+  /* 打卡实时联动：重算达标度与概率（含里程碑加成） */
+  if(lastA&&$("results").style.display==="block") run(false);
 });
 
 /* ---------- 专业方向 → 选科组合库 ---------- */
@@ -1215,6 +1257,10 @@ function run(scroll=true){
       ${C[k2].map(x=>`<div class="combo-li">${x}</div>`).join("")}
     </div>`;}).join("");
   $("comboNote").textContent="🏆 配套竞赛："+C.comp.join(" · ")+"　｜　"+C.note;
+  if(targetUnis.length>1){
+    const regs=[...new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>({hk:"港",uk:"英",us:"美",ca:"加",au:"澳"}[u.region])))].join("/");
+    $("comboNote").textContent+=`　🎓 ${targetUnis.length} 校联申：核心选科按最高门槛校（${targetUni.name.split(" ")[0]}）对齐，兼容 ${regs} 申请路径（最大公约数方案）。`;
+  }
   /* 顾问总评与行动清单 */
   const acts=[];
   if(a.mathGap) acts.push("数学：完成 2 套 IGCSE Extended 真题限时训练并建立错题库（目标 ≥85%）");
@@ -1229,8 +1275,10 @@ function run(scroll=true){
   $("advisorText").textContent=advisor;
   $("actionList").innerHTML=acts.slice(0,4).map(x=>`<li>${x}</li>`).join("");
   /* 三视图 */
-  semiGauge("gauge",a.readiness,css("--s1"),a.readiness+"%",`当前 ${a.score} / 要求 ${targetUni.req}`,68,14);
-  $("gaugeSub").textContent=`按 ${targetUni.name.split(" ")[0]}准入线折算`;
+  semiGauge("gauge",a.readiness,css("--s1"),a.readiness+"%",`当前 ${a.score} / 要求 ${a.reqEff}`,68,14);
+  $("gaugeSub").textContent=`按 ${targetUni.name.split(" ")[0]}${inp.major!=="undecided"?"·"+MAJORS[inp.major]:""}门槛折算`
+    +(a.majorBand?`（${a.majorBand}）`:"")
+    +(a.msBoost>0?` · 含里程碑达成加成 +${a.msBoost.toFixed(1)}`:"");
   drawRadar(a.current,a.reqProfile);
   $("prob").textContent=a.prob;
   $("probSub").textContent=a.probSub;
@@ -1238,11 +1286,24 @@ function run(scroll=true){
   $("gpaLine").textContent = a.gpa4!=null ? `⚙ GPA 引擎：${a.gpaNote}｜走势：${a.trendLabel}` : "⚙ GPA 引擎：未提供 GPA / 成绩数据，建议补录以启用双引擎评估";
   $("alPgLine").textContent = a.alPg ? `🎯 预估 A-Level 匹配区间：${a.alPg}` : "";
   $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ ${a.dualTrack?`推荐路线：${a.route} / ${a.alt} 双轨观察`:`推荐路线：${a.route}`} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
-  drawBars(inp,targetUni);
+  drawBars(inp,targetUni,a.reqEff);
+  /* 联申概率一览 */
+  if(targetUnis.length>1){
+    const rows=UNIS.filter(u=>targetUnis.includes(u.id)).sort((x,y)=>y.req-x.req)
+      .map(u=>{const r=u.id===targetUni.id?a:analyze(inp,u);
+        return `<span style="display:inline-block;margin:2px 10px 2px 0">${u.id===targetUni.id?"★ ":""}${u.name.split(" ")[0]} <b>${r.prob}</b></span>`;}).join("");
+    $("multiProb").innerHTML=`<div style="color:var(--muted);margin-bottom:2px">联申概率一览（★ = 主对标校）：</div>`+rows;
+  } else $("multiProb").innerHTML="";
   $("roadUni").textContent=targetUni.name;
   renderRoadTabs(a);
   /* JSON */
   $("json").textContent=JSON.stringify({
+    target_universities:{
+      primary:targetUni.name,
+      applied_threshold_index:a.reqEff,
+      major_adjustment:a.majorBand||"未指定专业（按院校基准线）",
+      list:UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>u.name),
+    },
     student_profile:{
       academic_type:a.acadType,
       map_percentile_analysis:a.mapAnalysis,
@@ -1291,6 +1352,14 @@ function run(scroll=true){
 }
 $("runBtn").addEventListener("click",()=>run(true));
 $("printBtn").addEventListener("click",()=>window.print());
+/* 顾问编辑模式（Human-in-the-Loop） */
+let editMode=false;
+$("editBtn").addEventListener("click",()=>{
+  editMode=!editMode;
+  ["advisorText","actionList","aiReason","aiRisk","comboNote"].forEach(id=>{$(id).contentEditable=editMode;});
+  $("editBtn").textContent=editMode?"✅ 完成编辑":"✏️ 顾问编辑模式";
+  $("editHint").style.display=editMode?"block":"none";
+});
 if(hadSaved){
   const inp=readInput();
   if(inp.courses.length||inp.eng||Object.keys(inp.map).length) run(false);
