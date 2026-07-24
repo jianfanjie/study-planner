@@ -322,6 +322,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
       <div class="gauge-sub" id="probSub"></div>
       <div class="gauge-sub" id="levelLine" style="margin-top:12px;font-size:12.5px;color:var(--ink-2)"></div>
       <div class="gauge-sub" id="gpaLine" style="margin-top:8px;font-size:12px;text-align:left"></div>
+      <div class="gauge-sub" id="alPgLine" style="margin-top:6px;font-size:12px;text-align:left;color:var(--good-text)"></div>
     </div>
   </div>
 
@@ -693,6 +694,13 @@ function analyze(inp,uni){
   }
   if(gpa4!=null&&gpaWeighted==null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
   if(inp.sys==="myp"&&ibEst45!=null) gpaNote+=(gpaNote?"；":"")+`预估 DP 总分 ≈${ibEst45}/45（6 科 ${r1(ibEst45-ibCore)}/42 + EE/TOK 核心 ${ibCore} 分）`;
+  /* A-Level 预估等级匹配区间（Predicted Grade Band） */
+  let alPg=null;
+  if(inp.sys==="igcse"&&present.length){
+    const avg=mean(allIdx);
+    alPg=(avg>=93?"A*A*A ~ A*A*A*":avg>=88?"A*AA ~ A*A*A":avg>=84?"AAA ~ A*AA":avg>=77?"AAB ~ AAA":avg>=70?"ABB ~ AAB":"BBB 及以下")
+        +(avg>=88?"（满足港大/G5 门槛）":avg>=84?"（满足港三所门槛）":"（距港大/G5 门槛尚有差距）");
+  }
   const TREND_ADJ={rising:4,stable:0,volatile:-3,declining:-7};
   const TREND_LABEL={rising:"持续上升",stable:"高位稳定",volatile:"起伏波动",declining:"呈现下滑"};
   let gpaIdx=null;
@@ -897,7 +905,7 @@ function analyze(inp,uni){
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
   return {current,reqProfile,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
-          gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
+          gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
 
@@ -968,7 +976,10 @@ function drawBars(inp,uni){
     </div>`);
   }
   $("subjectBars").innerHTML=rows.join("")||'<p class="hint">未输入课程成绩</p>';
-  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数（IB 的 HL 含 +3 难度加成，AP 统考分按 40% 权重融合）；核心科目（数学/科学/英语）要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，其余 75。`;
+  const lowGrade=(GRADE_NUM[inp.grade]||9)<=10;
+  const advCourses=inp.sys!=="myp"?inp.courses.length>0:inp.courses.some(c=>c.hl);
+  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数（IB 的 HL 含 +3 难度加成，AP 统考分按 40% 权重融合）；核心科目（数学/科学/英语）要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，其余 75。`
+    +(lowGrade&&advCourses?"　（注：G10–G11 拟修/预估科目进阶推断）":"");
 }
 
 /* ---------- 里程碑 ---------- */
@@ -1174,7 +1185,7 @@ function run(scroll=true){
   lastA=a; lastInp=inp;
   $("results").style.display="block";
   updateCountdown();
-  $("heroRoute").textContent=a.dualTrack?`双轨观察（${a.route}/${a.alt}）`:"AI 推荐 "+a.route;
+  $("heroRoute").textContent=a.dualTrack?`${a.route} / ${a.alt} 双轨观察`:"AI 推荐 "+a.route;
   /* AI 卡片 */
   const rc=css(ROUTE_COLOR[a.route]);
   document.querySelector(".ai").style.borderColor=rc;
@@ -1225,7 +1236,8 @@ function run(scroll=true){
   $("probSub").textContent=a.probSub;
   $("levelLine").textContent=`综合定位：${a.level}（指数 ${a.overall}/100）· 学术画像：${a.acadType}`;
   $("gpaLine").textContent = a.gpa4!=null ? `⚙ GPA 引擎：${a.gpaNote}｜走势：${a.trendLabel}` : "⚙ GPA 引擎：未提供 GPA / 成绩数据，建议补录以启用双引擎评估";
-  $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ 推荐路线：${a.route} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
+  $("alPgLine").textContent = a.alPg ? `🎯 预估 A-Level 匹配区间：${a.alPg}` : "";
+  $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ ${a.dualTrack?`推荐路线：${a.route} / ${a.alt} 双轨观察`:`推荐路线：${a.route}`} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
   drawBars(inp,targetUni);
   $("roadUni").textContent=targetUni.name;
   renderRoadTabs(a);
@@ -1244,6 +1256,7 @@ function run(scroll=true){
       weighted_gpa:a.gpaWeighted!=null?+a.gpaWeighted.toFixed(2):null,
       ib_predicted_45:a.ibEst45??undefined,
       ib_hl_count:inp.sys==="myp"?a.ibHlN:undefined,
+      al_predicted_band:a.alPg??undefined,
       trend:a.trendLabel, rigor:inp.rigor==="challenge"?"挑战级":"标准级",
       conversion_note:a.gpaNote||"未提供数据",
     },
