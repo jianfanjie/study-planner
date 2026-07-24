@@ -1314,31 +1314,38 @@ function analyze(inp,uni){
   /* BUG2 修复：概率按申请地区分曲线折算——美本综合评价封顶 25%，英港学术硬指标导向可达 55–70% */
   const PROB_CURVE={
     us:[[0.70,3],[0.85,8],[0.95,15],[1.00,20],[1.10,25]],
-    hk:[[0.70,8],[0.80,25],[0.90,55],[1.00,66],[1.08,70]],
+    /* 港三所 Cut-off 驱动：未硬性过线 → 保守观望区（曲线上限 ~52%）；过线由下方 hkCut 跃升 60-75% */
+    hk:[[0.70,5],[0.80,15],[0.90,30],[1.00,44],[1.08,52]],
     uk:[[0.70,5],[0.80,18],[0.90,45],[1.00,60],[1.08,70]],
     ca:[[0.70,6],[0.85,20],[0.95,35],[1.05,48]],
     au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
   };
   let probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
-  /* HKU Non-JUPAS：学术硬指标 Cut-off 驱动——IB 预估 ≥39 / A-Level 均分 A*A*A 档 / AP 4门5分+GPA3.9 → 过线即入 60-75% 高概率区间（组面决胜） */
-  const hkuCutoff = uni.id==="hku" && (
-    (inp.sys==="myp"&&ibEst45!=null&&ibEst45>=39) ||
-    (inp.sys==="igcse"&&allIdx.length>=3&&mean(allIdx)>=93) ||
-    (inp.sys==="us"&&present.filter(c=>c.apExam==="5").length>=4&&gpa4!=null&&(gpaWeighted??gpa4)>=3.9)
+  /* 港三所 Non-JUPAS：学术硬指标 Cut-off 驱动，门槛梯度拉开（HKU 最难）——过线才跃升 60-75%（面试决胜），未过线走保守曲线 */
+  const HK_CUT={hku:{ib:39,al:92,apN:4,gpa:3.9,band:"IB≥39 / A*A*A / AP 4门5分+GPA3.9"},
+                cuhk:{ib:38,al:89,apN:4,gpa:3.85,band:"IB≥38 / A*AA / AP 4门5分+GPA3.85"},
+                hkust:{ib:37,al:87,apN:3,gpa:3.8,band:"IB≥37 / AAA / AP 3门5分+GPA3.8"}};
+  const hc=HK_CUT[uni.id];
+  const hkCut = !!hc && (
+    (inp.sys==="myp"&&ibEst45!=null&&ibEst45>=hc.ib) ||
+    (inp.sys==="igcse"&&allIdx.length>=3&&mean(allIdx)>=hc.al) ||
+    (inp.sys==="us"&&present.filter(c=>c.apExam==="5").length>=hc.apN&&gpa4!=null&&(gpaWeighted??gpa4)>=hc.gpa)
   );
   /* 语言门槛（按各校官方线）：美本=硬拒因素封顶 5%；英港加澳=条件 offer 制封顶 35% */
   const engLow = uni.engReq!=null&&engIdx!=null&&engIdx<uni.engReq;
   const usLangGate = uni.region==="us"&&engLow;
   if(usLangGate) probPct=Math.min(probPct,5);
   else if(engLow) probPct=Math.min(probPct,35);
-  else if(hkuCutoff) probPct=clamp(Math.max(probPct,65),60,75);
+  else if(hkCut) probPct=clamp(Math.max(probPct,65),60,75);
   const prob=`≈ ${probPct}%`;
   const probSub=(usLangGate
     ? "⚠️ 语言硬门槛未达：美本 Top 30 实际要求 TOEFL 100+（录取者典型 110+）——当前概率封顶 5%，冲分后自动解锁"
     : engLow
     ? `⚠️ 语言未达该校线（${uni.engLabel}）——英联邦体系 offer 将附带语言条件，入学前须达标（概率暂封顶 35%）`
-    : hkuCutoff
-    ? "HKU Non-JUPAS 采用【硬指标过线 + 组面（Group Interview）决胜】机制：当前学术分已踏穿港大门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材"
+    : hkCut
+    ? `${uni.name.split(" ")[0]} Non-JUPAS 采用【硬指标过线 + 组面（Group Interview）决胜】机制：当前学术分已踏穿该校门槛线（${hc.band}），软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材`
+    : hc
+    ? `港三所为 Cut-off 驱动型：当前预估分未稳过 ${uni.name.split(" ")[0]}门槛线（${hc.band}）——概率处于观望区，冲进门槛带后将跃升至 60-75%`
     : uni.region==="us"
     ? "美本为 Holistic Review 综合评估：学术达标仅为入场券（概率硬性封顶 25%），文书与独特性软背景决定上限（学术 40% + 软实力 60% 权重模型）"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
@@ -1365,7 +1372,7 @@ function analyze(inp,uni){
   if(inp.leadership==="impact") strengths.push("有量化影响力的长期活动——综合评价体系的高权重素材");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,comps:compSel,bestTier,recs,soft:r1(soft),hkuCutoff,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
+  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,comps:compSel,bestTier,recs,soft:r1(soft),hkuCutoff:hkCut,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -1772,7 +1779,7 @@ function run(scroll=true){
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
   if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
   if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
-  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}${targetUni.id==="hku"&&a.hkuCutoff?"HKU Non-JUPAS 采用「硬指标过线 + 组面（Group Interview）决胜」机制——当前学术分已踏穿港大门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材。":""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}${targetUni.region==="hk"?(a.hkuCutoff?`${targetUni.name.split(" ")[0]} Non-JUPAS 采用「硬指标过线 + 组面决胜」机制——当前学术分已踏穿该校门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材。`:"港三所为 Cut-off 驱动型——当前预估分未稳过门槛线，第一优先级是把预估分推进门槛带，届时概率将跃升至 60-75%。"):""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
   $("alertList").innerHTML=a.alerts.length
     ? a.alerts.map(x=>{const i=x.indexOf("】");return `<li><b>${x.slice(0,i+1)}</b>${x.slice(i+1)}</li>`;}).join("")
     : `<li style="border-color:var(--s2);background:color-mix(in srgb,var(--s2) 6%,transparent)"><b style="color:var(--good-text)">【交叉校验通过】</b>GPA、语言、选科三项匹配度未触发风险规则</li>`;
