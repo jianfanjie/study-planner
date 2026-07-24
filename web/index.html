@@ -152,6 +152,8 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 .cchip.sel{border-color:var(--s1);background:color-mix(in srgb,var(--s1) 9%,transparent);color:var(--ink)}
 .tb{flex:none;font-size:10px;font-weight:800;border-radius:99px;padding:1px 7px;color:#fff;line-height:1.5}
 .tb.t1{background:#c2410c}.tb.t2{background:#a16207}.tb.t3{background:#15803d}.tb.t4{background:#6b7280}
+.soft3{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
+.soft3 label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
 .pm-card{border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;background:var(--page)}
 .pm-card h4{font-size:12.5px;margin-bottom:5px}
@@ -312,8 +314,9 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
       <div class="field">
         <label>竞赛与奖项履历（点选已获得 / 已晋级项；列表随「意向专业方向」切换；Tier 1 国际顶级 → Tier 4 校内参与）</label>
         <div class="cchip-box" id="compChips"></div>
+        <p class="hint" style="margin:5px 0 0">💡 竞赛为三大体系通用（IB / A-Level / AP 均认可）；探究项目术语（EE / EPQ / AP Research）随下方「科研 / 产出」按课程体系自动适配</p>
       </div>
-      <div class="grid3">
+      <div class="grid3 soft3">
         <div>
           <label for="leadership">领导力 / 活动</label>
           <select id="leadership">
@@ -325,13 +328,13 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
         <div>
-          <label for="research">科研 / 产出（综合科研金字塔）</label>
+          <label for="research">科研 / 产出</label>
           <select id="research">
             <option value="">未填写</option>
             <option value="none">暂无</option>
-            <option value="course">Tier 3：校内课程级项目 / Lab Report</option>
-            <option value="mentored">Tier 2：EPQ/IPQ A* / 导师制科研（有产出）</option>
-            <option value="published">Tier 1：丘奖 / ISEF 级奖项 / 期刊一作</option>
+            <option value="course">Tier 3：课程级项目 / Lab Report</option>
+            <option value="mentored">Tier 2：探究课题 / 导师制科研</option>
+            <option value="published">Tier 1：丘奖 / ISEF / 期刊一作</option>
           </select>
         </div>
         <div>
@@ -340,8 +343,8 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
             <option value="">未填写</option>
             <option value="none">暂无</option>
             <option value="general">普通游学 / 兴趣夏校</option>
-            <option value="academic">大学学术夏校（有学分 / 产出）</option>
-            <option value="elite">顶尖选拔制（RSI / SSP / LaunchX / 牛剑暑研）</option>
+            <option value="academic">大学学术夏校（有产出）</option>
+            <option value="elite">顶尖选拔制（RSI/SSP/LaunchX）</option>
           </select>
         </div>
       </div>
@@ -711,6 +714,18 @@ const COMP_DB=[
 ];
 const COMP_BY_ID=Object.fromEntries(COMP_DB.map(c=>[c.id,c]));
 const CAT_OF={eng:"stem",cs:"stem",bus:"bus",med:"sci",hum:"hum",art:"hum",undecided:null};
+/* 科研/产出金字塔：探究项目术语随课程体系适配（IB=EE/IA · A-Level=EPQ · AP=AP Research） */
+const RES_OPT={
+  myp:  {course:"Tier 3：IA / 课程级项目",          mentored:"Tier 2：EE 高分 / 导师制科研",        published:"Tier 1：丘奖 / ISEF / 期刊一作"},
+  igcse:{course:"Tier 3：课程级项目 / Lab Report",  mentored:"Tier 2：EPQ/IPQ A* / 导师制科研",    published:"Tier 1：丘奖 / ISEF / 期刊一作"},
+  us:   {course:"Tier 3：课程级项目 / Lab Report",  mentored:"Tier 2：AP Research 5 分 / 导师制科研",published:"Tier 1：丘奖 / ISEF / 期刊一作"},
+  explore:{course:"Tier 3：课程级项目 / Lab Report",mentored:"Tier 2：探究课题 / 导师制科研",       published:"Tier 1：丘奖 / ISEF / 期刊一作"},
+};
+const RES_REC={myp:"以 EE 选题衔接导师制科研",igcse:"启动 EPQ/IPQ 冲 A*",us:"规划 AP Research / 导师制科研",explore:"启动导师制科研 / 探究课题"};
+function updateResearchOpts(){
+  const o=RES_OPT[$("gradeSystem").value]||RES_OPT.explore;
+  for(const k in o){const el=document.querySelector(`#research option[value=${k}]`); if(el) el.textContent=o[k];}
+}
 let selComps=((LS.get("inputs",{})||{}).comps||[]).filter(id=>COMP_BY_ID[id]);
 function renderCompChips(){
   const cat=CAT_OF[$("major").value];
@@ -749,7 +764,7 @@ function restoreInputs(){
   $("engScore").disabled=$("engType").value==="none";
   return true;
 }
-$("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();saveInputs();});
+$("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();updateResearchOpts();saveInputs();});
 $("engType").addEventListener("change",()=>{$("engScore").disabled=$("engType").value==="none";saveInputs();});
 for(const id of INPUT_IDS) $(id).addEventListener("change",saveInputs);
 $("gradeLevel").addEventListener("change",updateCountdown);
@@ -757,6 +772,7 @@ $("major").addEventListener("change",renderCompChips);
 renderSubjectInputs();
 renderCompChips();
 const hadSaved=restoreInputs();
+updateResearchOpts();
 updateCountdown();
 
 $("demoBtn").addEventListener("click",()=>{
@@ -1132,7 +1148,7 @@ function analyze(inp,uni){
     const vc=CAT_OF[inp.major];
     const hasVert=compSel.some(c=>c.cat===vc&&c.t<=2)||["mentored","published"].includes(inp.research);
     const vNames={stem:"AMC/AIME、BPhO",bus:"NEC、IEO",sci:"BBO、UKChO",hum:"John Locke"}[vc];
-    if(!hasVert) alerts.push(`【学科深度预警】英港录取注重学术垂直深度：申请「${MAJORS[inp.major]}」方向未见 ${vNames} 等高级别学科竞赛或 EPQ/科研探究项目——${selRegions.has("uk")?"牛剑/G5 笔试与面试":"HKU 甄选面试"}竞争力不足，建议本学年完成 1 项（赛历节点已注入路线图）`);
+    if(!hasVert) alerts.push(`【学科深度预警】英港录取注重学术垂直深度：申请「${MAJORS[inp.major]}」方向未见 ${vNames} 等高级别学科竞赛或探究项目（${inp.sys==="myp"?"EE":inp.sys==="us"?"AP Research":"EPQ"}/科研）——${selRegions.has("uk")?"牛剑/G5 笔试与面试":"HKU 甄选面试"}竞争力不足，建议本学年完成 1 项（赛历节点已注入路线图）`);
   }
   if(selRegions.has("us")&&engIdx!=null&&engIdx<85) alerts.push(`【语言硬门槛预警】美本 Top 30/藤校实际录取者托福典型 110+（哥大本科最低 100；哈佛明示低于 100 视为流利度不足）——当前语言等效指数 ${r1(engIdx)}（约 TOEFL ${engIdx>=78?"90-99":"90 以下"}档），美本概率已被硬性封顶 5%，请优先将托福冲至 105+`);
   const engMissNonUS=UNIS.filter(u=>targetUnis.includes(u.id)&&u.region!=="us"&&u.engReq&&engIdx!=null&&engIdx<u.engReq);
@@ -1352,7 +1368,8 @@ function renderProfileMatrix(a,inp,mk){
   const tb=t=>`<span class="tb t${t}">T${t}</span>`;
   const li=(t,txt)=>`<div class="pm-li">${t?tb(t):""}<span>${txt}</span></div>`;
   const none=`<div class="pm-li" style="color:var(--muted)">暂无记录</div>`;
-  const RES_L={course:["校内课程级项目 / Lab Report",3],mentored:["EPQ/IPQ A* / 导师制科研（有产出）",2],published:["丘奖 / ISEF 级 / 期刊一作",1]};
+  const RO=RES_OPT[inp.sys]||RES_OPT.explore;
+  const RES_L={course:[RO.course.replace(/^Tier \d：/,""),3],mentored:[RO.mentored.replace(/^Tier \d：/,""),2],published:[RO.published.replace(/^Tier \d：/,""),1]};
   const LEAD_L={member:["社团成员 / 常规活动",3],leader:["创始人 / 队长 / 学生会",2],impact:["有量化影响力的长期项目",1]};
   const SUM_L={general:["普通游学 / 兴趣夏校",4],academic:["大学学术夏校（有学分 / 产出）",2],elite:["顶尖选拔制夏校（RSI/SSP/LaunchX）",1]};
   const sumRec={bus:"沃顿 LBW / LaunchX 创业营",stem:"SSP / RSI / 牛剑暑研",sci:"SSP 生化方向 / 大学实验室暑研",hum:"爱荷华青年作家工作坊 / 牛津人文暑校"}[CAT_OF[mk]||"bus"];
@@ -1360,7 +1377,7 @@ function renderProfileMatrix(a,inp,mk){
     {h:"① 核心竞赛履历",have:a.comps.length?a.comps.map(c=>li(c.t,c.n)).join(""):none,
      rec:a.recs.length?a.recs.map(c=>li(c.t,`${c.n}（${c.m}）`)).join(""):li(1,"已达 Tier 1 顶配——维持并深化获奖主线")},
     {h:"② 学术科研 / 写作",have:RES_L[inp.research]?li(RES_L[inp.research][1],RES_L[inp.research][0]):none,
-     rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,"冲击丘奖 / ISEF 附属赛（Tier 1）"):li(2,"启动 EPQ/IPQ 或导师制科研（Tier 2）")},
+     rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,"冲击丘奖 / ISEF 附属赛（Tier 1）"):li(2,`${RES_REC[inp.sys]||RES_REC.explore}（Tier 2）`)},
     {h:"③ 领导力与社团",have:LEAD_L[inp.leadership]?li(LEAD_L[inp.leadership][1],LEAD_L[inp.leadership][0]):none,
      rec:inp.leadership==="impact"?li(1,"沉淀量化数据（人数 / 资金 / 媒体报道）进文书"):li(2,"将参与升级为「可量化影响力」主线项目（创始 / NGO）")},
     {h:"④ 夏校与学术营地",have:SUM_L[inp.summer]?li(SUM_L[inp.summer][1],SUM_L[inp.summer][0]):none,
@@ -1376,7 +1393,7 @@ function renderProfileMatrix(a,inp,mk){
   const a2=analyze(simInp,targetUni);
   const p1=parseInt(a.prob.replace(/[^\d]/g,""))||0, p2=parseInt(a2.prob.replace(/[^\d]/g,""))||0;
   const rel=p1>0?Math.round((p2-p1)/p1*100):0;
-  const recTxt=a.recs.map(c=>`<b>${c.n}【Tier ${c.t}】</b>`).join(" + ")+(needRes?"，并启动 <b>EPQ / 导师制科研【Tier 2】</b>":"");
+  const recTxt=a.recs.map(c=>`<b>${c.n}【Tier ${c.t}】</b>`).join(" + ")+(needRes?`，并<b>${RES_REC[inp.sys]||RES_REC.explore}【Tier 2】</b>`:"");
   $("parentCard").innerHTML=(p2>p1||a2.soft>a.soft)
     ? `👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>若在接下来 1–2 个学期完成 ${recTxt}——软实力维度 <b>${a.soft} → ${a2.soft}</b>，对 <b>${targetUni.name.split(" ")[0]}</b> 达标度 <b>${a.readiness}% → ${a2.readiness}%</b>，录取概率 <b>${a.prob} → ${a2.prob}</b>${rel>0?`（<span class="up">相对提升约 ${rel}%</span>）`:""}。对应赛历节点已注入下方路线图与 90 天行动清单。`
     : `👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>软实力分值已达画像上限——完成 ${recTxt} 的价值不在分值，而在把优势升级为<b>「叙事证据」</b>：${targetUni.region==="us"?"美本文书与面试的核心素材，是同分竞争者之间的决胜项":"面试与个人陈述的核心素材，对冲同分竞争者"}。赛历节点已注入下方路线图。`;
@@ -1649,7 +1666,7 @@ function run(scroll=true){
       competitions:a.comps.map(c=>({name:c.n,tier:`Tier ${c.t}`,calendar:c.m})),
       best_tier:a.bestTier?`Tier ${a.bestTier}`:"无竞赛履历",
       leadership:{"":"未填写",none:"暂无",member:"社团成员",leader:"创始人/队长/学生会",impact:"量化影响力长期项目"}[inp.leadership],
-      research:{"":"未填写",none:"暂无",course:"Tier 3 课程级",mentored:"Tier 2 EPQ/导师制科研",published:"Tier 1 发表/获奖级"}[inp.research],
+      research:{"":"未填写",none:"暂无",course:"Tier 3 课程级",mentored:"Tier 2 探究项目（EE/EPQ/AP Research）/导师制科研",published:"Tier 1 发表/获奖级"}[inp.research],
       summer_program:{"":"未填写",none:"暂无",general:"普通夏校",academic:"大学学术夏校",elite:"顶尖选拔制夏校"}[inp.summer],
       activity_score:a.actFilled?a.actScore:"未评估（用代理值）",
       upgrade_recommendations:a.recs.map(c=>`${c.n}【Tier ${c.t}】（${c.m}）`),
