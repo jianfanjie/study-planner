@@ -443,7 +443,7 @@ const UNIS=[
   {id:"hku",  name:"香港大学 HKU",       region:"hk", rank:"QS 17 · Non-JUPAS 内卷", al:"A*AA – A*A*A", ib:"38 – 42", ap:"GPA 3.8+ / 5门AP 4-5分", req:88},
   {id:"cuhk", name:"香港中文大学 CUHK",  region:"hk", rank:"QS 32 · Non-JUPAS", al:"A*AA",       ib:"38 – 40", ap:"GPA 3.7+ / 4门AP 4+",   req:86},
   {id:"hkust",name:"香港科技大学 HKUST", region:"hk", rank:"QS 44", al:"AAA – A*AA",  ib:"35 – 38", ap:"GPA 3.6+ / 4门AP 4+",   req:84},
-  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2",  al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"5门+ AP 5分 + SAT 1550",  req:92},
+  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2 · 仅 STEM+商科",  al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"3-4门 AP 5分（不收 SAT）",  req:92, excl:["hum","art"]},
   {id:"oxford",  name:"牛津大学 Oxford",  region:"uk",rank:"QS 3",  al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"5门+ AP 5分 + SAT 1550",  req:93},
   {id:"cambridge",name:"剑桥大学 Cambridge",region:"uk",rank:"QS 5",al:"A*A*A – A*A*A*",ib:"42+（HL 全 7）", ap:"5门+ AP 5分 + SAT 1550",  req:94},
   {id:"ucl",  name:"伦敦大学学院 UCL",   region:"uk", rank:"QS 9",  al:"A*AA – ABB", ib:"36 – 39", ap:"4-5门AP 4-5分",         req:88},
@@ -1030,6 +1030,12 @@ function analyze(inp,uni){
   if(needAdvMath&&!ibGate) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
   if(selRegions.has("us")&&actFilled&&actScore===0) alerts.push("【软背景预警】目标含美本，但竞赛/活动/科研档案均为「暂无」——综合评价体系下概率将被显著压制，建议立即立项 1 个长期活动 + 报名 1 项竞赛");
   if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写活动与奖项档案——当前美本概率按保守代理值估算，补录后将重新校准");
+  if(selRegions.has("us")&&engIdx!=null&&engIdx<85) alerts.push(`【语言硬门槛预警】美本 Top 30/藤校实际录取者托福典型 110+（哥大本科最低 100；哈佛明示低于 100 视为流利度不足）——当前语言等效指数 ${r1(engIdx)}（约 TOEFL ${engIdx>=78?"90-99":"90 以下"}档），美本概率已被硬性封顶 5%，请优先将托福冲至 105+`);
+  /* 选校-专业适配拦截（如帝国理工无人文社科本科） */
+  const mkEff=inp.major!=="undecided"?inp.major:(spread>=10?"eng":spread<=-10?"hum":"bus");
+  for(const u of UNIS.filter(u=>targetUnis.includes(u.id))){
+    if(u.excl&&u.excl.includes(mkEff)) alerts.push(`【选校适配预警】${u.name.split(" ")[0]}不开设「${MAJORS[mkEff]}」本科（该校仅 STEM+商科）——请将其移出联申清单，或调整专业方向`);
+  }
 
   /* MAP 百分位诊断文本 */
   const mapAnalysis = (mM||mR||mL) ? [
@@ -1054,9 +1060,14 @@ function analyze(inp,uni){
     ca:[[0.70,6],[0.85,20],[0.95,35],[1.05,48]],
     au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
   };
-  const probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
+  let probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
+  /* 美本语言硬门槛（哈佛官方口径：TOEFL <100 即存疑；录取者典型 110+）：未达线时概率封顶 5% */
+  const usLangGate = uni.region==="us"&&engIdx!=null&&engIdx<85;
+  if(usLangGate) probPct=Math.min(probPct,5);
   const prob=`≈ ${probPct}%`;
-  const probSub=(uni.region==="us"
+  const probSub=(usLangGate
+    ? "⚠️ 语言硬门槛未达：美本 Top 30 实际要求 TOEFL 100+（录取者典型 110+）——当前概率封顶 5%，冲分后自动解锁"
+    : uni.region==="us"
     ? "美本为综合评价：学术达标只是入场券（概率硬性封顶 25%），活动/文书/科研软背景决定上限"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
     : probPct>=30?"有差距，2 年窗口内可弥合"
@@ -1066,7 +1077,7 @@ function analyze(inp,uni){
   if(overallBase>=85)level="卓越梯队 Tier 1";else if(overallBase>=75)level="优秀梯队 Tier 2";else if(overallBase>=63)level="潜力梯队 Tier 3";else level="地基构筑期 Tier 4";
 
   const gaps=[];
-  if(mathIdx!=null&&mathIdx<uni.req) gaps.push(`数学距 ${uni.name.split(" ")[0]}准入线差 ${r1(uni.req-mathIdx)} 分`);
+  if(mathIdx!=null&&mathIdx<uni.req) gaps.push(`数学距 ${uni.name.split(" ")[0]}准入线差 ${r1(uni.req-mathIdx)} 分（含 MAP 年级常模混合校准，故与课程分条不同口径）`);
   if(engIdx!=null&&engIdx<78) gaps.push("学术英语未达 IELTS 6.5 / TOEFL 90 锚点");
   if(engIdx==null) gaps.push("缺英语标化基线，需 3 个月内建立");
   if(writing<60) gaps.push(`科研写作 ${r1(writing)} 分，距论文体系要求有距离`);
@@ -1444,6 +1455,8 @@ function run(scroll=true){
   const selU=UNIS.filter(u=>targetUnis.includes(u.id)).sort((x,y)=>y.req-x.req);
   $("multiProb").innerHTML=(selU.length>1?`<div style="color:var(--muted);margin-bottom:3px">各校录取概率（★ = 主对标校）：</div>`:"")+
     selU.map(u=>{
+      if(u.excl&&u.excl.includes(mk))
+        return `<div class="mp-row"><span>${u.name.split(" ")[0]}</span><div class="mp-track"></div><b style="color:var(--s6)">不适配</b></div>`;
       const r=u.id===targetUni.id?a:analyze(inp,u);
       const p=Math.min(parseInt(r.prob.replace(/[^\d]/g,""))||0,100);
       return `<div class="mp-row"><span>${u.id===targetUni.id&&selU.length>1?"★ ":""}${u.name.split(" ")[0]}</span><div class="mp-track"><div class="mp-fill" style="width:${p}%"></div></div><b>${r.prob}</b></div>`;
