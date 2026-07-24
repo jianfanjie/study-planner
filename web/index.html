@@ -177,7 +177,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
   body{padding:0;background:#fff}
   .hero .countdown,#cardUni,#cardInput,#printBtn,#editBtn,#editHint,details.raw,.rtabs button:not(.active){display:none !important}
   #printHeader{display:block !important}
-  .card,.vcard,.node,.bar-row,.combo,.pm-card,.parent-card{page-break-inside:avoid;break-inside:avoid}
+  .card,.vcard,.node,.bar-row,.combo,.pm-card,.parent-card{page-break-inside:avoid !important;break-inside:avoid !important}
   .card{box-shadow:none}
   .ai{border-width:1.5px}
   .node{padding-bottom:10px}
@@ -726,11 +726,14 @@ const COMP_DB=[
   {id:"isef",  cat:"sci", t:1, n:"ISEF 国际科学与工程大奖赛（决赛入围）", m:"秋冬附属赛 → 5 月全球总决赛"},
   {id:"igem",  cat:"sci", t:1, n:"iGEM 国际基因工程机器大赛（金牌）", m:"春季组队 → 10 月总决赛"},
   {id:"bbo",   cat:"sci", t:2, core:1, n:"BBO 英国生物奥赛（金 / 银）", m:"4 月"},
+  {id:"usabo", cat:"sci", t:2, n:"USABO 美国生物奥赛（半决赛以上）", m:"2 月公开赛 → 3 月半决赛"},
   {id:"ukcho", cat:"sci", t:2, n:"UKChO 英国化学奥赛（金 / 银）", m:"1 月"},
   {id:"bbee",  cat:"sci", t:2, n:"Brain Bee 脑科学大赛（全国奖）", m:"1 – 3 月"},
   {id:"sci_s", cat:"sci", t:3, n:"校内实验项目 / 科学展", m:"全年"},
   /* 人文 / 社科 */
   {id:"jlocke",cat:"hum", t:1, core:1, n:"John Locke 论文竞赛（Shortlist / 获奖）", m:"4 月报名 → 6 月底提交"},
+  {id:"concord",cat:"hum",t:1, n:"Concord Review 历史论文（发表）", m:"季刊制 · 全年投稿"},
+  {id:"marshall",cat:"hum",t:2, n:"剑桥 Marshall Society 经济论文赛", m:"暑期截稿"},
   {id:"nyt",   cat:"hum", t:2, n:"纽约时报 NYT 中学生写作 / 社论竞赛", m:"分赛道全年滚动"},
   {id:"nhd",   cat:"hum", t:2, n:"NHD 美国国家历史日（全国赛）", m:"校 / 区赛 → 6 月全国"},
   {id:"mun",   cat:"hum", t:2, n:"哈佛 / 耶鲁模联（最佳代表）", m:"1 – 3 月会期"},
@@ -744,9 +747,9 @@ const RES_OPT={
   myp:  {course:"Tier 3：IA / 课程级项目",          mentored:"Tier 2：EE 高分 / 导师制科研",        published:"Tier 1：丘奖 / ISEF / 期刊一作"},
   igcse:{course:"Tier 3：课程级项目 / Lab Report",  mentored:"Tier 2：EPQ/IPQ A* / 导师制科研",    published:"Tier 1：丘奖 / ISEF / 期刊一作"},
   us:   {course:"Tier 3：课程级项目 / Lab Report",  mentored:"Tier 2：AP Research 5 分 / 导师制科研",published:"Tier 1：丘奖 / ISEF / 期刊一作"},
-  explore:{course:"Tier 3：课程级项目 / Lab Report",mentored:"Tier 2：探究课题 / 导师制科研",       published:"Tier 1：丘奖 / ISEF / 期刊一作"},
+  explore:{course:"Tier 3：探究式 Lab Report / 500 字学术小论文",mentored:"Tier 2：导师制探究课题（有产出）",published:"Tier 1：丘奖 / ISEF / 期刊一作"},
 };
-const RES_REC={myp:"以 EE 选题衔接导师制科研",igcse:"启动 EPQ/IPQ 冲 A*",us:"规划 AP Research / 导师制科研",explore:"启动导师制科研 / 探究课题"};
+const RES_REC={myp:"以 EE 预研 / IA 独立探究衔接导师制科研",igcse:"启动 EPQ A* 课题 / 垂直学术 Essay",us:"规划 AP Research / 导师制科研",explore:"启动探究式 Lab Report + 500 字学术小论文训练"};
 function updateResearchOpts(){
   const o=RES_OPT[$("gradeSystem").value]||RES_OPT.explore;
   for(const k in o){const el=document.querySelector(`#research option[value=${k}]`); if(el) el.textContent=o[k];}
@@ -1276,12 +1279,22 @@ function analyze(inp,uni){
   : eG>=11 ? (inp.sat?`${inp.sat.type.toUpperCase()} ${inp.sat.score}（标化等效指数 ${inp.sat.index}——高年级以 SAT/ACT 替代 MAP 口径）`:"高年级以 SAT/ACT 为核心标化——尚未提供，建议尽快首考出分")
   : "未提供 MAP 数据——建议 3 个月内补测，校准学术潜力基线";
 
-  /* 达标度与概率 */
+  /* 达标度与概率 —— 国别解耦模型：
+     美本 = 学术 40% + 软实力金字塔 60%（Holistic Review）；
+     英港加澳 = 学术硬指标 70% + 垂直学科竞赛/探究 30%（笔试面试竞争力） */
   const msDone=Object.keys(LS.get("milestones",{})).length;
   const msBoost=Math.min(msDone*0.8,6);   /* 里程碑达成 → 实时上调评估 */
-  const score=clamp((na
-    ? gpaHard*0.35+langAb*0.25+((writing+inquiry)/2)*0.2+soft*0.2
-    : depth*0.45+gpaHard*0.3+langAb*0.25+(alStemSig?3:0))+msBoost,0,100);
+  const T_IDX={1:97,2:85,3:68,4:56};
+  const vertComp=compSel.filter(c=>c.cat===(CAT_OF[mkEff]||"bus"));
+  const vertBest=vertComp.length?T_IDX[Math.min(...vertComp.map(c=>c.t))]:null;
+  const RES_IDX={published:95,mentored:82,course:64,none:50};
+  const vertParts=[vertBest,RES_IDX[inp.research]??null].filter(v=>v!=null);
+  const vertIdx=vertParts.length?r1(mean(vertParts)):52;   /* 未填 → 代理值 */
+  const acadUS=gpaHard*0.5+langAb*0.35+((writing+inquiry)/2)*0.15;
+  const acadUKHK=depth*0.45+gpaHard*0.3+langAb*0.25+(alStemSig?3:0);
+  const score=clamp((uni.region==="us"
+    ? acadUS*0.4+soft*0.6
+    : acadUKHK*0.7+vertIdx*0.3)+msBoost,0,100);
   const readiness=r1(clamp(score/reqEff*100,0,100));
   const ratio=score/reqEff;
   /* BUG2 修复：概率按申请地区分曲线折算——美本综合评价封顶 25%，英港学术硬指标导向可达 55–70% */
@@ -1304,7 +1317,7 @@ function analyze(inp,uni){
     : engLow
     ? `⚠️ 语言未达该校线（${uni.engLabel}）——英联邦体系 offer 将附带语言条件，入学前须达标（概率暂封顶 35%）`
     : uni.region==="us"
-    ? "美本为综合评价：学术达标只是入场券（概率硬性封顶 25%），活动/文书/科研软背景决定上限"
+    ? "美本为 Holistic Review 综合评估：学术达标仅为入场券（概率硬性封顶 25%），文书与独特性软背景决定上限（学术 40% + 软实力 60% 权重模型）"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
     : probPct>=30?"有差距，2 年窗口内可弥合"
     : "地基期，概率随里程碑达成动态上修")
@@ -1483,17 +1496,25 @@ function renderProfileMatrix(a,inp,mk){
   const RES_L={course:[RO.course.replace(/^Tier \d：/,""),3],mentored:[RO.mentored.replace(/^Tier \d：/,""),2],published:[RO.published.replace(/^Tier \d：/,""),1]};
   const LEAD_L={member:["社团成员 / 常规活动",3],leader:["创始人 / 队长 / 学生会",2],impact:["有量化影响力的长期项目",1]};
   const SUM_L={general:["普通游学 / 兴趣夏校",4],academic:["大学学术夏校（有学分 / 产出）",2],elite:["顶尖选拔制夏校（RSI/SSP/LaunchX）",1]};
-  const sumRec={bus:"沃顿 LBW / LaunchX 创业营",stem:"SSP / RSI / 牛剑暑研",sci:"SSP 生化方向 / 大学实验室暑研",hum:"爱荷华青年作家工作坊 / 牛津人文暑校"}[CAT_OF[mk]||"bus"];
+  /* 国别倾向适配：申美 → 领导力高亮 + 美系选拔营；纯英港 → 学术纯粹度提示 + 英系学术拓展 */
+  const regs=new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>u.region));
+  const hasUS=regs.has("us"), ukhkOnly=(regs.has("uk")||regs.has("hk"))&&!hasUS;
+  const cat=CAT_OF[mk]||"bus";
+  const sumRec=(hasUS
+    ? {bus:"沃顿 LBW / LaunchX 创业营",stem:"SSP / RSI / 牛剑暑研",sci:"SSP 生化方向 / 大学实验室暑研",hum:"爱荷华青年作家工作坊 / 牛津人文暑校"}
+    : {bus:"LSE / 剑桥经济学术夏校",stem:"牛剑 / 帝国理工学术夏校 · BPhO/AMC 训练营",sci:"UNIQ / 剑桥自然科学暑校",hum:"牛剑人文暑校 / John Locke 写作营"})[cat];
   $("pmGrid").innerHTML=[
     {h:"① 核心竞赛履历",have:a.comps.length?a.comps.map(c=>li(c.t,c.n)).join(""):none,
      rec:a.recs.length?a.recs.map(c=>li(c.t,`${c.n}（${c.m}）`)).join(""):li(1,"已达 Tier 1 顶配——维持并深化获奖主线")},
     {h:"② 学术科研 / 写作",have:RES_L[inp.research]?li(RES_L[inp.research][1],RES_L[inp.research][0]):none,
      rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,"冲击丘奖 / ISEF 附属赛（Tier 1）"):li(2,`${RES_REC[inp.sys]||RES_REC.explore}（Tier 2）`)},
-    {h:"③ 领导力与社团",have:LEAD_L[inp.leadership]?li(LEAD_L[inp.leadership][1],LEAD_L[inp.leadership][0]):none,
-     rec:inp.leadership==="impact"?li(1,"沉淀量化数据（人数 / 资金 / 媒体报道）进文书"):li(2,"将参与升级为「可量化影响力」主线项目（创始 / NGO）")},
+    {h:"③ 领导力与社团"+(hasUS?"（美本高权重）":""),hl:hasUS,
+     have:LEAD_L[inp.leadership]?li(LEAD_L[inp.leadership][1],LEAD_L[inp.leadership][0]):none,
+     rec:ukhkOnly?li(2,"英港录取看重学术纯粹度——社团保持适度参与即可，时间优先投入垂直学科竞赛与探究项目")
+        :inp.leadership==="impact"?li(1,"沉淀量化数据（人数 / 资金 / 媒体报道）进文书"):li(2,"将参与升级为「可量化影响力」主线项目（创始 / NGO）")},
     {h:"④ 夏校与学术营地",have:SUM_L[inp.summer]?li(SUM_L[inp.summer][1],SUM_L[inp.summer][0]):none,
-     rec:inp.summer==="elite"?li(1,"用夏校导师推荐信 + 科研产出背书申请"):li(1,`12 – 1 月申请：${sumRec}（选拔制 = Tier 1 背书）`)},
-  ].map(c=>`<div class="pm-card"><h4>${c.h}</h4><div class="pm-lab">已有履历</div>${c.have}<div class="pm-lab">建议冲刺</div>${c.rec}</div>`).join("");
+     rec:inp.summer==="elite"?li(1,"用夏校导师推荐信 + 科研产出背书申请"):li(hasUS?1:2,`12 – 1 月申请：${sumRec}（${hasUS?"选拔制 = Tier 1 背书":"英系学术拓展背书"}）`)},
+  ].map(c=>`<div class="pm-card"${c.hl?' style="border-color:var(--s1)"':""}><h4>${c.h}</h4><div class="pm-lab">已有履历</div>${c.have}<div class="pm-lab">建议冲刺</div>${c.rec}</div>`).join("");
   /* 家长行动卡：把建议项加入档案后重跑引擎，展示真实提升幅度（非营销话术） */
   if(!a.recs.length){
     $("parentCard").innerHTML=`👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>竞赛履历已达 Tier 1 顶配——当前提升杠杆在文书叙事与科研深化，维持现有主线即可。`;
@@ -1720,7 +1741,7 @@ function run(scroll=true){
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
   if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
   if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
-  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
   $("alertList").innerHTML=a.alerts.length
     ? a.alerts.map(x=>{const i=x.indexOf("】");return `<li><b>${x.slice(0,i+1)}</b>${x.slice(i+1)}</li>`;}).join("")
     : `<li style="border-color:var(--s2);background:color-mix(in srgb,var(--s2) 6%,transparent)"><b style="color:var(--good-text)">【交叉校验通过】</b>GPA、语言、选科三项匹配度未触发风险规则</li>`;
