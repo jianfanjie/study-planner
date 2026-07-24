@@ -145,6 +145,21 @@ details.raw{margin-top:6px}
 details.raw summary{font-size:12px;color:var(--muted);cursor:pointer}
 pre.json{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:11.5px;overflow-x:auto;max-height:340px;margin-top:8px}
 #alPgLine:not(:empty){display:inline-block;font-size:12px;font-weight:600;color:var(--good-text);border:1.5px solid var(--s2);border-radius:99px;padding:3px 14px;background:color-mix(in srgb,var(--s2) 8%,transparent)}
+/* 软实力金字塔：竞赛点选芯片 + 履历诊断面板（Profile Matrix）+ 家长行动卡 */
+.cchip-box{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.cchip{font-family:inherit;font-size:12px;color:var(--ink-2);background:var(--page);border:1.5px solid var(--border);border-radius:99px;padding:4px 12px 4px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-align:left}
+.cchip:hover{border-color:var(--s1)}
+.cchip.sel{border-color:var(--s1);background:color-mix(in srgb,var(--s1) 9%,transparent);color:var(--ink)}
+.tb{flex:none;font-size:10px;font-weight:800;border-radius:99px;padding:1px 7px;color:#fff;line-height:1.5}
+.tb.t1{background:#c2410c}.tb.t2{background:#a16207}.tb.t3{background:#15803d}.tb.t4{background:#6b7280}
+.pm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+.pm-card{border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;background:var(--page)}
+.pm-card h4{font-size:12.5px;margin-bottom:5px}
+.pm-li{font-size:12px;color:var(--ink-2);padding:3.5px 0;border-top:1px dashed var(--grid);display:flex;gap:6px;align-items:baseline;line-height:1.45}
+.pm-lab{font-size:11px;font-weight:700;color:var(--muted);margin-top:7px}
+.parent-card{margin-top:12px;border:2px solid var(--s6);border-radius:12px;padding:13px 16px;background:color-mix(in srgb,var(--s6) 6%,transparent);font-size:12.5px;color:var(--ink-2);line-height:1.8}
+.parent-card b{color:var(--ink)}
+.parent-card .up{color:var(--good-text);font-weight:800}
 /* 打印/导出 PDF：强制浅色图表配色（防止深色模式下白字印白纸） */
 :root[data-print="1"]{
   color-scheme:light;
@@ -160,7 +175,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
   body{padding:0;background:#fff}
   .hero .countdown,#cardUni,#cardInput,#printBtn,#editBtn,#editHint,details.raw,.rtabs button:not(.active){display:none !important}
   #printHeader{display:block !important}
-  .card,.vcard,.node,.bar-row,.combo{page-break-inside:avoid;break-inside:avoid}
+  .card,.vcard,.node,.bar-row,.combo,.pm-card,.parent-card{page-break-inside:avoid;break-inside:avoid}
   .card{box-shadow:none}
   .ai{border-width:1.5px}
   .node{padding-bottom:10px}
@@ -293,18 +308,12 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
       </div>
-      <div class="sec">❺ 活动与奖项档案（可选——直接影响软实力维度与美本概率）</div>
+      <div class="sec">❺ 软实力档案（竞赛 · 活动 · 科研 · 夏校——直接影响软实力维度与美本概率）</div>
+      <div class="field">
+        <label>竞赛与奖项履历（点选已获得 / 已晋级项；列表随「意向专业方向」切换；Tier 1 国际顶级 → Tier 4 校内参与）</label>
+        <div class="cchip-box" id="compChips"></div>
+      </div>
       <div class="grid3">
-        <div>
-          <label for="compAward">竞赛最高奖项</label>
-          <select id="compAward">
-            <option value="">未填写</option>
-            <option value="none">暂无</option>
-            <option value="school">校级奖项</option>
-            <option value="national">国家 / 区域级奖项</option>
-            <option value="intl">国际级（AIME / John Locke 入围等）</option>
-          </select>
-        </div>
         <div>
           <label for="leadership">领导力 / 活动</label>
           <select id="leadership">
@@ -316,13 +325,23 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
         <div>
-          <label for="research">科研 / 产出</label>
+          <label for="research">科研 / 产出（综合科研金字塔）</label>
           <select id="research">
             <option value="">未填写</option>
             <option value="none">暂无</option>
-            <option value="course">课程级项目</option>
-            <option value="mentored">导师制科研 / 夏校（有产出）</option>
-            <option value="published">发表 / 获奖级产出</option>
+            <option value="course">Tier 3：校内课程级项目 / Lab Report</option>
+            <option value="mentored">Tier 2：EPQ/IPQ A* / 导师制科研（有产出）</option>
+            <option value="published">Tier 1：丘奖 / ISEF 级奖项 / 期刊一作</option>
+          </select>
+        </div>
+        <div>
+          <label for="summer">夏校 / 学术营地</label>
+          <select id="summer">
+            <option value="">未填写</option>
+            <option value="none">暂无</option>
+            <option value="general">普通游学 / 兴趣夏校</option>
+            <option value="academic">大学学术夏校（有学分 / 产出）</option>
+            <option value="elite">顶尖选拔制（RSI / SSP / LaunchX / 牛剑暑研）</option>
           </select>
         </div>
       </div>
@@ -390,6 +409,13 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
       <div id="alPgLine" style="margin-top:8px"></div>
       <div id="multiProb" style="margin-top:10px;font-size:12px;text-align:left"></div>
     </div>
+  </div>
+
+  <!-- 软实力履历诊断（Profile Matrix）+ 家长行动卡 -->
+  <div class="card">
+    <h2>🧗 软实力履历诊断 Profile Matrix<span style="font-weight:400;font-size:12px;color:var(--muted)">（四维硬核履历 · 金字塔 Tier 1 国际顶级 → Tier 4 校内参与）</span></h2>
+    <div class="pm-grid" id="pmGrid"></div>
+    <div class="parent-card" id="parentCard"></div>
   </div>
 
   <div class="card">
@@ -650,10 +676,61 @@ function renderSubjectInputs(){
     for(const [id,v] of Object.entries(saved.courseState[sys])) if($(id)) $(id).value=v;
   }
 }
-const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","compAward","leadership","research"];
+/* ---------- 软实力：竞赛金字塔数据库（按专业方向 · Tier 1 国际顶级 → Tier 4 校内参与，附真实赛历） ---------- */
+const COMP_DB=[
+  /* 商科 / 经济 */
+  {id:"nec_f", cat:"bus", t:1, core:1, n:"NEC 全美经济学挑战赛（中国站决赛 / 全球站）", m:"12 月区域站 → 3 月中国站 → 5 月全球站"},
+  {id:"ieo",   cat:"bus", t:1, n:"IEO 国际经济学奥林匹克（国家队 / 国际赛）", m:"春季国内选拔 → 7 月国际赛"},
+  {id:"sic",   cat:"bus", t:2, core:1, n:"SIC 中学生投资挑战赛（全国奖）", m:"9 月 – 次年 4 月赛季"},
+  {id:"kwhs",  cat:"bus", t:2, n:"沃顿全球投资挑战 WGHS（原 KWHS）", m:"9 – 12 月比赛季"},
+  {id:"fbla",  cat:"bus", t:2, n:"FBLA 美国未来商业领袖挑战（全国奖）", m:"12 月初选 → 次年 4 月全国"},
+  {id:"biz_s", cat:"bus", t:3, n:"校级商赛 / 商业社团项目", m:"全年"},
+  /* 工程 / CS */
+  {id:"usamo", cat:"stem",t:1, n:"USAMO 美国数学奥林匹克（AIME 晋级后）", m:"11 月 AMC → 2 月 AIME → 3 月 USAMO"},
+  {id:"bpho_g",cat:"stem",t:1, n:"BPhO 英国物理奥赛 Top Gold（超金）", m:"11 月 Round 1"},
+  {id:"usaco_g",cat:"stem",t:1,n:"USACO 美国信息学奥赛（金组 / 铂金）", m:"12 – 2 月月赛升组 + 3 月公开赛"},
+  {id:"aime",  cat:"stem",t:2, core:1, n:"AMC12 前 5% → AIME 晋级（美国数学竞赛）", m:"11 月 AMC → 次年 2 月 AIME"},
+  {id:"yau",   cat:"stem",t:2, n:"丘成桐中学科学奖（入围以上）", m:"4 月报名 → 12 月总决赛"},
+  {id:"euclid",cat:"stem",t:3, core:1, n:"Euclid 欧几里得数学竞赛（滑铁卢）", m:"4 月"},
+  {id:"pbowl", cat:"stem",t:3, n:"Physics Bowl 物理碗", m:"3 月下旬"},
+  {id:"stem_s",cat:"stem",t:4, n:"校级数学 / 科学竞赛 · STEM 社团", m:"全年"},
+  /* 理科 / 生化 */
+  {id:"isef",  cat:"sci", t:1, n:"ISEF 国际科学与工程大奖赛（决赛入围）", m:"秋冬附属赛 → 5 月全球总决赛"},
+  {id:"igem",  cat:"sci", t:1, n:"iGEM 国际基因工程机器大赛（金牌）", m:"春季组队 → 10 月总决赛"},
+  {id:"bbo",   cat:"sci", t:2, core:1, n:"BBO 英国生物奥赛（金 / 银）", m:"4 月"},
+  {id:"ukcho", cat:"sci", t:2, n:"UKChO 英国化学奥赛（金 / 银）", m:"1 月"},
+  {id:"bbee",  cat:"sci", t:2, n:"Brain Bee 脑科学大赛（全国奖）", m:"1 – 3 月"},
+  {id:"sci_s", cat:"sci", t:3, n:"校内实验项目 / 科学展", m:"全年"},
+  /* 人文 / 社科 */
+  {id:"jlocke",cat:"hum", t:1, core:1, n:"John Locke 论文竞赛（Shortlist / 获奖）", m:"4 月报名 → 6 月底提交"},
+  {id:"nyt",   cat:"hum", t:2, n:"纽约时报 NYT 中学生写作 / 社论竞赛", m:"分赛道全年滚动"},
+  {id:"nhd",   cat:"hum", t:2, n:"NHD 美国国家历史日（全国赛）", m:"校 / 区赛 → 6 月全国"},
+  {id:"mun",   cat:"hum", t:2, n:"哈佛 / 耶鲁模联（最佳代表）", m:"1 – 3 月会期"},
+  {id:"schol", cat:"hum", t:2, n:"Scholastic 学术艺术与写作奖（金 / 银钥匙）", m:"12 月截稿"},
+  {id:"hum_s", cat:"hum", t:3, n:"校级辩论 / 模联 / 校刊", m:"全年"},
+];
+const COMP_BY_ID=Object.fromEntries(COMP_DB.map(c=>[c.id,c]));
+const CAT_OF={eng:"stem",cs:"stem",bus:"bus",med:"sci",hum:"hum",art:"hum",undecided:null};
+let selComps=((LS.get("inputs",{})||{}).comps||[]).filter(id=>COMP_BY_ID[id]);
+function renderCompChips(){
+  const cat=CAT_OF[$("major").value];
+  const list=COMP_DB.filter(c=>cat?c.cat===cat:c.core);
+  const extra=selComps.filter(id=>!list.some(c=>c.id===id)).map(id=>COMP_BY_ID[id]);  /* 跨方向已选项保留展示 */
+  $("compChips").innerHTML=[...list,...extra].map(c=>
+    `<button type="button" class="cchip${selComps.includes(c.id)?" sel":""}" data-comp="${c.id}" title="赛历：${c.m}"><span class="tb t${c.t}">T${c.t}</span>${c.n}</button>`).join("");
+}
+$("compChips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-comp]"); if(!b) return;
+  const id=b.dataset.comp;
+  selComps=selComps.includes(id)?selComps.filter(x=>x!==id):[...selComps,id];
+  b.classList.toggle("sel");
+  saveInputs();
+});
+const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","leadership","research","summer"];
 function saveInputs(){
   const d=LS.get("inputs",{})||{};
   for(const id of INPUT_IDS) d[id]=$(id).value;
+  d.comps=selComps;
   d.courseState=d.courseState||{};
   const cs={};
   document.querySelectorAll("#subjectInputs select, #subjectInputs input").forEach(el=>{cs[el.id]=el.value;});
@@ -667,6 +744,8 @@ function restoreInputs(){
   if(d.gradeSystem) $("gradeSystem").value=d.gradeSystem;
   renderSubjectInputs();
   for(const id of INPUT_IDS) if(d[id]!=null&&$(id)) $(id).value=d[id];
+  selComps=(Array.isArray(d.comps)?d.comps:[]).filter(id=>COMP_BY_ID[id]);
+  renderCompChips();
   $("engScore").disabled=$("engType").value==="none";
   return true;
 }
@@ -674,7 +753,9 @@ $("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();saveInputs
 $("engType").addEventListener("change",()=>{$("engScore").disabled=$("engType").value==="none";saveInputs();});
 for(const id of INPUT_IDS) $(id).addEventListener("change",saveInputs);
 $("gradeLevel").addEventListener("change",updateCountdown);
+$("major").addEventListener("change",renderCompChips);
 renderSubjectInputs();
+renderCompChips();
 const hadSaved=restoreInputs();
 updateCountdown();
 
@@ -704,7 +785,8 @@ $("demoBtn").addEventListener("click",()=>{
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
   $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
-  $("compAward").value="national"; $("leadership").value="leader"; $("research").value="mentored";
+  selComps=["sic"]; renderCompChips();
+  $("leadership").value="leader"; $("research").value="mentored"; $("summer").value="academic";
   saveInputs();
 });
 
@@ -755,7 +837,7 @@ function readInput(){
   }
   return {sys,grade,courses,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
           schoolTier:$("schoolTier").value,
-          compAward:$("compAward").value,leadership:$("leadership").value,research:$("research").value,
+          comps:selComps.slice(),leadership:$("leadership").value,research:$("research").value,summer:$("summer").value,
           gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
 }
 
@@ -841,10 +923,14 @@ function analyze(inp,uni){
     if(inp.schoolTier!=="t2") gpaNote+=`；${TIER_LABEL[inp.schoolTier]}含金量校准 ${TIER_ADJ[inp.schoolTier]>0?"+":""}${TIER_ADJ[inp.schoolTier]}`;
   }
   const gpaHard = gpaIdx!=null ? r1(allIdx.length? gpaIdx*0.6+mean(allIdx)*0.4 : gpaIdx) : (allIdx.length? r1(mean(allIdx)) : 50);
-  /* 软实力：活动与奖项档案（真实数据）优先；未填写时退回代理估算 */
-  const ACT_W={school:8,national:16,intl:24}, LEAD_W={member:6,leader:13,impact:18}, RES_W={course:6,mentored:14,published:20};
-  const actFilled=[inp.compAward,inp.leadership,inp.research].some(v=>v);
-  const actScore=(ACT_W[inp.compAward]||0)+(LEAD_W[inp.leadership]||0)+(RES_W[inp.research]||0);
+  /* 软实力：四维金字塔档案（竞赛 Tier + 领导力 + 科研 + 夏校）真实数据优先；未填写时退回代理估算 */
+  const LEAD_W={member:6,leader:13,impact:18}, RES_W={course:6,mentored:14,published:20}, SUM_W={general:2,academic:7,elite:13};
+  const compSel=(inp.comps||[]).map(id=>COMP_BY_ID[id]).filter(Boolean);
+  const bestTier=compSel.length?Math.min(...compSel.map(c=>c.t)):null;
+  const TIER_W={1:30,2:22,3:13,4:6};
+  const compScore=bestTier?TIER_W[bestTier]+Math.min((compSel.length-1)*3,6):0;
+  const actFilled=compSel.length>0||[inp.leadership,inp.research,inp.summer].some(v=>v);
+  const actScore=compScore+(LEAD_W[inp.leadership]||0)+(RES_W[inp.research]||0)+(SUM_W[inp.summer]||0);
   const soft=clamp((actFilled?40+actScore:52)+(inp.gpaTrend==="rising"?4:inp.gpaTrend==="declining"?-5:0)+(inp.rigor==="challenge"?4:0),0,100);
 
   /* 新五维：GPA硬实力 · 标化语言 · 学科深度/竞赛 · 探究与写作 · 软实力活动 */
@@ -1029,13 +1115,29 @@ function analyze(inp,uni){
     : courses.some(c=>/Calculus BC/.test(c.subj)&&c.index>=80);
   const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!advMathOK;
   if(needAdvMath&&!ibGate) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
+  /* 软实力升维推荐：按金字塔向上一级推荐（已有 T1/T2 → 冲 T1；否则先补 T2） */
+  const mkEff=inp.major!=="undecided"?inp.major:(spread>=10?"eng":spread<=-10?"hum":"bus");
+  const recs=(()=>{
+    const cat=CAT_OF[mkEff]||"bus", has=new Set(compSel.map(c=>c.id));
+    const goalT=(bestTier&&bestTier<=2)?1:2;
+    return COMP_DB.filter(c=>c.cat===cat&&!has.has(c.id)&&c.t<=goalT).sort((x,y)=>x.t-y.t).slice(0,2);
+  })();
   if(selRegions.has("us")&&actFilled&&actScore===0) alerts.push("【软背景预警】目标含美本，但竞赛/活动/科研档案均为「暂无」——综合评价体系下概率将被显著压制，建议立即立项 1 个长期活动 + 报名 1 项竞赛");
-  if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写活动与奖项档案——当前美本概率按保守代理值估算，补录后将重新校准");
+  if(selRegions.has("us")&&!actFilled) alerts.push("【软背景提示】目标含美本但未填写软实力档案——当前美本概率按保守代理值估算，补录后将重新校准");
+  /* 规则一：美本软实力断层预警（软实力维度低于目标校要求线） */
+  if(selRegions.has("us")&&actFilled&&actScore>0&&r1(soft)<reqProfile[4])
+    alerts.push(`【美本软实力断层预警】学术 GPA 仅为入场券：当前软实力维度 ${r1(soft)}/${reqProfile[4]}（${bestTier?`竞赛最高履历 Tier ${bestTier}`:"暂无竞赛履历"}），缺乏 ${bestTier===2?"Tier 1":"Tier 1/2"} 级别竞赛或独特主线活动，美本录取胜率受限——需在 90 天内锁定 1 项核心竞赛/科研（建议：${recs.map(c=>`${c.n}【T${c.t}】`).join("、")||"深化现有 Tier 1 主线"}）`);
+  /* 规则二：英港学科深度预警（申请方向未匹配垂直学科竞赛 / 探究项目） */
+  if((selRegions.has("uk")||selRegions.has("hk"))&&inp.major!=="undecided"&&CAT_OF[inp.major]){
+    const vc=CAT_OF[inp.major];
+    const hasVert=compSel.some(c=>c.cat===vc&&c.t<=2)||["mentored","published"].includes(inp.research);
+    const vNames={stem:"AMC/AIME、BPhO",bus:"NEC、IEO",sci:"BBO、UKChO",hum:"John Locke"}[vc];
+    if(!hasVert) alerts.push(`【学科深度预警】英港录取注重学术垂直深度：申请「${MAJORS[inp.major]}」方向未见 ${vNames} 等高级别学科竞赛或 EPQ/科研探究项目——${selRegions.has("uk")?"牛剑/G5 笔试与面试":"HKU 甄选面试"}竞争力不足，建议本学年完成 1 项（赛历节点已注入路线图）`);
+  }
   if(selRegions.has("us")&&engIdx!=null&&engIdx<85) alerts.push(`【语言硬门槛预警】美本 Top 30/藤校实际录取者托福典型 110+（哥大本科最低 100；哈佛明示低于 100 视为流利度不足）——当前语言等效指数 ${r1(engIdx)}（约 TOEFL ${engIdx>=78?"90-99":"90 以下"}档），美本概率已被硬性封顶 5%，请优先将托福冲至 105+`);
   const engMissNonUS=UNIS.filter(u=>targetUnis.includes(u.id)&&u.region!=="us"&&u.engReq&&engIdx!=null&&engIdx<u.engReq);
   if(engMissNonUS.length) alerts.push(`【语言条件提醒】以下目标校语言线未达：${engMissNonUS.map(u=>`${u.name.split(" ")[0]}（要求 ${u.engLabel}）`).join("、")}——英联邦体系 offer 将附带语言条件，须在入学前考到，建议与大考复习并行规划`);
   /* 选校-专业适配拦截（如帝国理工无人文社科本科） */
-  const mkEff=inp.major!=="undecided"?inp.major:(spread>=10?"eng":spread<=-10?"hum":"bus");
   for(const u of UNIS.filter(u=>targetUnis.includes(u.id))){
     if(u.excl&&u.excl.includes(mkEff)) alerts.push(`【选校适配预警】${u.name.split(" ")[0]}不开设「${MAJORS[mkEff]}」本科（该校仅 STEM+商科）——请将其移出联申清单，或调整专业方向`);
   }
@@ -1094,13 +1196,13 @@ function analyze(inp,uni){
   if(inp.map.math&&inp.map.math.pct>=85) strengths.push(`MAP 数学第 ${inp.map.math.pct} 百分位`);
   if(engIdx!=null&&engIdx>=78) strengths.push("学术英语已达高阶阅读门槛");
   if(alStemSig) strengths.push("进阶数学/物理 A*-A——申港/申英理工申请核心强信号");
-  if(inp.compAward==="intl") strengths.push("国际级竞赛奖项——美本/牛剑面试的核心叙事素材");
-  else if(inp.compAward==="national") strengths.push("国家/区域级竞赛奖项——软背景已具备骨架");
+  if(bestTier===1) strengths.push(`Tier 1 顶级竞赛履历（${compSel.filter(c=>c.t===1).map(c=>c.n.split("（")[0].trim()).join("、")}）——美本/牛剑面试的核心叙事素材`);
+  else if(bestTier===2) strengths.push("Tier 2 高含金量竞赛履历——软背景已具备骨架，再上一级即形成尖峰");
   if(inp.research==="published") strengths.push("发表/获奖级科研产出——申请材料中的稀缺项");
   if(inp.leadership==="impact") strengths.push("有量化影响力的长期活动——综合评价体系的高权重素材");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
+  return {current,reqProfile,reqEff,majorBand,msBoost,actScore,actFilled,comps:compSel,bestTier,recs,soft:r1(soft),route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,alPg,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -1245,6 +1347,41 @@ const COMBO={
 };
 const inferMajor=a=> a.spread>=10?"eng" : a.spread<=-10?"hum" : "bus";
 
+/* ---------- 软实力履历诊断（Profile Matrix）+ 家长行动卡 ---------- */
+function renderProfileMatrix(a,inp,mk){
+  const tb=t=>`<span class="tb t${t}">T${t}</span>`;
+  const li=(t,txt)=>`<div class="pm-li">${t?tb(t):""}<span>${txt}</span></div>`;
+  const none=`<div class="pm-li" style="color:var(--muted)">暂无记录</div>`;
+  const RES_L={course:["校内课程级项目 / Lab Report",3],mentored:["EPQ/IPQ A* / 导师制科研（有产出）",2],published:["丘奖 / ISEF 级 / 期刊一作",1]};
+  const LEAD_L={member:["社团成员 / 常规活动",3],leader:["创始人 / 队长 / 学生会",2],impact:["有量化影响力的长期项目",1]};
+  const SUM_L={general:["普通游学 / 兴趣夏校",4],academic:["大学学术夏校（有学分 / 产出）",2],elite:["顶尖选拔制夏校（RSI/SSP/LaunchX）",1]};
+  const sumRec={bus:"沃顿 LBW / LaunchX 创业营",stem:"SSP / RSI / 牛剑暑研",sci:"SSP 生化方向 / 大学实验室暑研",hum:"爱荷华青年作家工作坊 / 牛津人文暑校"}[CAT_OF[mk]||"bus"];
+  $("pmGrid").innerHTML=[
+    {h:"① 核心竞赛履历",have:a.comps.length?a.comps.map(c=>li(c.t,c.n)).join(""):none,
+     rec:a.recs.length?a.recs.map(c=>li(c.t,`${c.n}（${c.m}）`)).join(""):li(1,"已达 Tier 1 顶配——维持并深化获奖主线")},
+    {h:"② 学术科研 / 写作",have:RES_L[inp.research]?li(RES_L[inp.research][1],RES_L[inp.research][0]):none,
+     rec:inp.research==="published"?li(1,"冲击期刊发表 / 决赛答辩展示"):inp.research==="mentored"?li(1,"冲击丘奖 / ISEF 附属赛（Tier 1）"):li(2,"启动 EPQ/IPQ 或导师制科研（Tier 2）")},
+    {h:"③ 领导力与社团",have:LEAD_L[inp.leadership]?li(LEAD_L[inp.leadership][1],LEAD_L[inp.leadership][0]):none,
+     rec:inp.leadership==="impact"?li(1,"沉淀量化数据（人数 / 资金 / 媒体报道）进文书"):li(2,"将参与升级为「可量化影响力」主线项目（创始 / NGO）")},
+    {h:"④ 夏校与学术营地",have:SUM_L[inp.summer]?li(SUM_L[inp.summer][1],SUM_L[inp.summer][0]):none,
+     rec:inp.summer==="elite"?li(1,"用夏校导师推荐信 + 科研产出背书申请"):li(1,`12 – 1 月申请：${sumRec}（选拔制 = Tier 1 背书）`)},
+  ].map(c=>`<div class="pm-card"><h4>${c.h}</h4><div class="pm-lab">已有履历</div>${c.have}<div class="pm-lab">建议冲刺</div>${c.rec}</div>`).join("");
+  /* 家长行动卡：把建议项加入档案后重跑引擎，展示真实提升幅度（非营销话术） */
+  if(!a.recs.length){
+    $("parentCard").innerHTML=`👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>竞赛履历已达 Tier 1 顶配——当前提升杠杆在文书叙事与科研深化，维持现有主线即可。`;
+    return;
+  }
+  const needRes=["","none","course"].includes(inp.research);
+  const simInp={...inp,comps:[...inp.comps,...a.recs.map(c=>c.id)],research:needRes?"mentored":inp.research};
+  const a2=analyze(simInp,targetUni);
+  const p1=parseInt(a.prob.replace(/[^\d]/g,""))||0, p2=parseInt(a2.prob.replace(/[^\d]/g,""))||0;
+  const rel=p1>0?Math.round((p2-p1)/p1*100):0;
+  const recTxt=a.recs.map(c=>`<b>${c.n}【Tier ${c.t}】</b>`).join(" + ")+(needRes?"，并启动 <b>EPQ / 导师制科研【Tier 2】</b>":"");
+  $("parentCard").innerHTML=(p2>p1||a2.soft>a.soft)
+    ? `👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>若在接下来 1–2 个学期完成 ${recTxt}——软实力维度 <b>${a.soft} → ${a2.soft}</b>，对 <b>${targetUni.name.split(" ")[0]}</b> 达标度 <b>${a.readiness}% → ${a2.readiness}%</b>，录取概率 <b>${a.prob} → ${a2.prob}</b>${rel>0?`（<span class="up">相对提升约 ${rel}%</span>）`:""}。对应赛历节点已注入下方路线图与 90 天行动清单。`
+    : `👨‍👩‍👧 <b>家长行动卡 Parent Action Card：</b>软实力分值已达画像上限——完成 ${recTxt} 的价值不在分值，而在把优势升级为<b>「叙事证据」</b>：${targetUni.region==="us"?"美本文书与面试的核心素材，是同分竞争者之间的决胜项":"面试与个人陈述的核心素材，对冲同分竞争者"}。赛历节点已注入下方路线图。`;
+}
+
 /* ---------- 三轨路线图 ---------- */
 let lastA=null,lastInp=null,curTrack=null;
 function trackNodes(track,a,inp){
@@ -1265,7 +1402,7 @@ function trackNodes(track,a,inp){
       p2:["攻克二次函数综合压轴题 + 圆定理/相似综合证明（IGCSE Extended 高分题型）","IGCSE 选科规划（6–8 门，必含数理英）",a.engGap?"TOEFL 模考冲 80":"TOEFL 首考 95+"],
       p3:["IGCSE 统考全力冲 5A* · Past Paper 错题库清零","IELTS 首考 6.5"],
       pd:["IGCSE 出分 → 锁定 3–4 门 AS/A2 科目（如 Math/FM/Physics/Econ）"],
-      p4:["AS 阶段全 A · 垂直深耕","竞赛嵌入：AMC12 / 物理杯 / BPhO（配合牛剑 G5 面试）","IELTS 7.0（写作 6.5+）"],
+      p4:["AS 阶段全 A · 垂直深耕","IELTS 7.0（写作 6.5+）"],
       p5:[applyStr,"预测分 A*A*A 达标"],
       p6:["A-Level 大考 A*A*A – A*A*A* · STEP/MAT（若需）"],
     },
@@ -1296,9 +1433,18 @@ function trackNodes(track,a,inp){
     T.p1=["托福冲 80 / 雅思 6.0 锚点训练",`体验课：试修 1 门 ${track==="A-Level"?"IGCSE":track==="AP"?"AP":"MYP/Pre-IB"} 课程（网课或校内）`];
     T.p2=["标化正式出分（TOEFL 80+ / IELTS 6.0）","试学反馈复盘 + 综合画像复评"];
   }
+  /* 竞赛赛历注入：按专业方向把金字塔冲刺节点铺进对应学年（真实赛历月份） */
+  const cat=CAT_OF[inp.major]||(a.spread>=10?"stem":a.spread<=-10?"hum":"bus");
+  const CAL={
+    bus:{p3:["🏆 9–11 月 NEC 报名 → 12 月区域站（Tier 2→1 通道）"],p4:["🏆 3 月 NEC 中国站决赛 / IEO 选拔（Tier 1）","🏆 9–12 月 沃顿 WGHS 投资挑战（Tier 2）"],sum:"🏆 暑期：NEC / 沃顿 WGHS 备赛 + 商业实践项目沉淀"},
+    stem:{p3:["🏆 11 月 AMC10/12 → 次年 2 月 AIME 晋级（Tier 2）"],p4:["🏆 11 月 BPhO Round 1 冲金（Tier 1 通道）","🏆 12–2 月 USACO 月赛升组（金组 = Tier 1）"],sum:"🏆 暑期：AMC12 / BPhO 真题集训"},
+    sci:{p3:["🏆 1 月 UKChO / 4 月 BBO 冲金银（Tier 2）"],p4:["🏆 秋冬 ISEF 附属赛区域赛（Tier 1 通道）","🏆 春季 iGEM 组队 → 10 月总决赛"],sum:"🏆 暑期：BBO / UKChO 真题集训 + 实验项目"},
+    hum:{p3:["🏆 4 月 John Locke 报名 → 6 月底提交（Tier 1 通道）"],p4:["🏆 12 月 Scholastic 写作奖投稿 / NHD（Tier 2）","🏆 1–3 月 哈佛/耶鲁模联会期（Tier 2）"],sum:"🏆 暑期：John Locke 论文终稿 / 写作集打磨"},
+  }[cat];
+  T.p3=[...T.p3,...CAL.p3]; T.p4=[...T.p4,...CAL.p4];
   /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
   const SUMMER={
-    "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）","竞赛备赛：AMC12 / 物理杯"],12:["预测分冲刺复习","PS 文书初稿"]},
+    "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）",CAL.sum],12:["预测分冲刺复习","PS 文书初稿"]},
     "IB":{10:["Personal Project（个人课题）选题预研","学术写作预热"],11:["EE 方向预研 + HL 预习","CAS 长期项目构思"],12:["EE 终稿冲刺","PS/文书初稿"]},
     "AP":{10:["首批 AP 预习（微积分 BC）","SAT 词汇启动"],11:["高阶 AP 预习（CS/经济）","SAT 系统刷题启动"],12:["Common App 文书初稿","SAT 最后冲分"]},
   };
@@ -1342,7 +1488,7 @@ function renderRoad(track){
     b.style.borderColor=on?css(ROUTE_COLOR[b.dataset.track]):"";
   });
   const laneOf=s=>/UCAS|Common App|OUAC|Non-JUPAS|递交|文书|PS |申请|选校|推荐信|ED\/EA|直申/.test(s)?"l3"
-    :/竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|Kaggle|Scholastic|科研|夏校|作品集|CAS/.test(s)?"l2":"l1";
+    :/🏆|竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|模联|Kaggle|Scholastic|沃顿|WGHS|SIC|FBLA|ISEF|丘成桐|USAMO|Euclid|欧几里得|Brain Bee|NHD|EPQ|科研|夏校|作品集|CAS/.test(s)?"l2":"l1";
   const LANE_LABEL={l1:"GPA·标化",l2:"竞赛·科研",l3:"背景·申请"};
   const nodes=trackNodes(track,lastA,lastInp);
   $("road").innerHTML=nodes.map(n=>`
@@ -1366,7 +1512,7 @@ function renderRoadTabs(a){
 function trackJSON(track,a,inp){
   const n=trackNodes(track,a,inp);
   const isTest=s=>/IELTS|TOEFL|SAT|ACT|MAP|词汇量|模考|UCAT|BMAT|STEP|MAT\b/i.test(s);
-  const isComp=s=>/竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|Kaggle|Scholastic|夏校|科研|作品集/.test(s);
+  const isComp=s=>/🏆|竞赛|AMC|AIME|BPhO|物理杯|NEC|IEO|John Locke|USACO|UKChO|BBO|iGEM|MUN|模联|Kaggle|Scholastic|沃顿|WGHS|SIC|FBLA|ISEF|丘成桐|USAMO|Euclid|欧几里得|Brain Bee|NHD|EPQ|夏校|科研|作品集/.test(s);
   const mk=(label,ns)=>{
     const items=ns.flatMap(x=>x.items.filter(i=>!i.startsWith("⚑")&&!i.includes("目标达成")));
     return {phase:label,
@@ -1432,8 +1578,11 @@ function run(scroll=true){
     const regs=[...new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>({hk:"港",uk:"英",us:"美",ca:"加",au:"澳"}[u.region])))].join("/");
     $("comboNote").textContent+=`　🎓 ${targetUnis.length} 校联申：核心选科按最高门槛校（${targetUni.name.split(" ")[0]}）对齐，兼容 ${regs} 申请路径（最大公约数方案）。`;
   }
+  /* 软实力履历诊断面板 + 家长行动卡 */
+  renderProfileMatrix(a,inp,mk);
   /* 顾问总评与行动清单 */
   const acts=[];
+  if(a.recs.length) acts.push(`竞赛升维（90 天内锁定）：报名 ${a.recs[0].n}【Tier ${a.recs[0].t}】——赛历 ${a.recs[0].m}，先完成组队 / 首轮真题`);
   if(a.mathGap) acts.push("数学：完成 2 套 IGCSE Extended 真题限时训练并建立错题库（目标 ≥85%）");
   if(a.engGap) acts.push("英语：预约一次官方 TOEFL TestReady / IELTS 模考，锁定基线分");
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
@@ -1497,10 +1646,13 @@ function run(scroll=true){
     },
     cross_alerts:a.alerts,
     activity_profile:{
-      competition:{"":"未填写",none:"暂无",school:"校级",national:"国家/区域级",intl:"国际级"}[inp.compAward],
+      competitions:a.comps.map(c=>({name:c.n,tier:`Tier ${c.t}`,calendar:c.m})),
+      best_tier:a.bestTier?`Tier ${a.bestTier}`:"无竞赛履历",
       leadership:{"":"未填写",none:"暂无",member:"社团成员",leader:"创始人/队长/学生会",impact:"量化影响力长期项目"}[inp.leadership],
-      research:{"":"未填写",none:"暂无",course:"课程级",mentored:"导师制科研/夏校",published:"发表/获奖级"}[inp.research],
+      research:{"":"未填写",none:"暂无",course:"Tier 3 课程级",mentored:"Tier 2 EPQ/导师制科研",published:"Tier 1 发表/获奖级"}[inp.research],
+      summer_program:{"":"未填写",none:"暂无",general:"普通夏校",academic:"大学学术夏校",elite:"顶尖选拔制夏校"}[inp.summer],
       activity_score:a.actFilled?a.actScore:"未评估（用代理值）",
+      upgrade_recommendations:a.recs.map(c=>`${c.n}【Tier ${c.t}】（${c.m}）`),
     },
     course_profile:{
       curriculum_system:inp.sys==="myp"?"IB (MYP/DP)":inp.sys==="igcse"?"A-Level":inp.sys==="us"?"AP":"探索期（通用指标）",
