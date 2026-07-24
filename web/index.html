@@ -52,6 +52,11 @@ select,input[type=number]{width:100%;padding:7px 9px;font-size:13px;color:var(--
 select:focus,input:focus{outline:2px solid var(--s1);outline-offset:1px}
 .field{margin-bottom:10px}
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.crow{display:grid;grid-template-columns:96px 1.5fr 0.75fr 0.85fr;gap:6px;margin-bottom:6px;align-items:center}
+.crow.al{grid-template-columns:96px 1.9fr 1fr}
+.crow .gl{font-size:11px;color:var(--muted);font-weight:600;line-height:1.3}
+.crow .gl b{color:var(--ink-2)}
+.crow select{padding:6px 7px;font-size:12.5px}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 button.btn{font-family:inherit;font-size:14px;font-weight:600;border-radius:9px;cursor:pointer;padding:9px 20px;border:1px solid var(--border);background:var(--page);color:var(--ink)}
 button.btn.primary{background:var(--s1);border-color:var(--s1);color:#fff}
@@ -80,8 +85,8 @@ button.btn:hover{filter:brightness(1.06)}
 .gauge-sub{font-size:12px;color:var(--muted);margin-top:4px}
 .prob{font-size:30px;font-weight:700;margin:10px 0 4px}
 /* subject bars */
-.bar-row{display:grid;grid-template-columns:96px 1fr 84px;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
-.bar-name{color:var(--ink-2);text-align:right;white-space:nowrap}
+.bar-row{display:grid;grid-template-columns:150px 1fr 84px;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
+.bar-name{color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
 .bar-track{position:relative;height:14px;background:var(--grid);border-radius:4px}
 .bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--s1)}
 .bar-target{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
@@ -209,8 +214,8 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
         </div>
       </div>
-      <label style="margin-bottom:6px">各科成绩（可留空；A-Level 体系下即“通道 A”，将自动换算等效 GPA）</label>
-      <div class="subj-grid" id="subjectInputs"></div>
+      <label style="margin-bottom:6px" id="subjHint">各科成绩</label>
+      <div id="subjectInputs"></div>
     </div>
     <div>
       <div class="sec">❸ 语言与标化</div>
@@ -419,22 +424,28 @@ function updateCountdown(){
   $("heroGrade").textContent=GRADE_LABEL[$("gradeLevel").value]||"";
 }
 
-/* ---------- 科目与换算 ---------- */
-const SUBJECTS=[
-  {key:"math",label:"数学",group:"stem",core:true},
-  {key:"engSch",label:"英语（校内）",group:"lang",core:true},
-  {key:"physics",label:"物理",group:"stem",core:true},
-  {key:"chemistry",label:"化学",group:"stem",core:true},
-  {key:"biology",label:"生物",group:"stem",core:true},
-  {key:"humanities",label:"人文（史地）",group:"hum",core:true},
-  {key:"lang2",label:"第二语言",group:"hum",core:false},
-  {key:"arts",label:"艺术 / 设计",group:"art",core:false},
+/* ---------- 三体系真实科目定义 ---------- */
+const IB_GROUPS=[
+  {g:1,label:"Group 1<br><b>语言 A</b>",opts:["Chinese A: Lang & Lit","English A: Lang & Lit"],def:"Chinese A: Lang & Lit"},
+  {g:2,label:"Group 2<br><b>语言 B</b>",opts:["English B","Spanish B","French B"],def:"English B"},
+  {g:3,label:"Group 3<br><b>人文社科</b>",opts:["Economics","History","Psychology","Business Management","Geography"],def:"Economics"},
+  {g:4,label:"Group 4<br><b>实验科学</b>",opts:["Physics","Chemistry","Biology","Computer Science"],def:"Physics"},
+  {g:5,label:"Group 5<br><b>数学 ★</b>",opts:["Math AA（分析与方法）","Math AI（应用与解释）"],def:"Math AA（分析与方法）"},
+  {g:6,label:"Group 6<br><b>艺术/选修</b>",opts:["Visual Arts","Music","增选组3（Econ/History）","增选组4（Chem/Bio）"],def:"Visual Arts"},
 ];
-const GRADE_OPTIONS={
-  myp:["7","6","5","4","3","2","1"],
-  igcse:["A*","A","B","C","D","E","9","8","7","6","5","4","3","2","1"],
-  us:["A+","A","A-","B+","B","B-","C+","C","C-","D","F"],
-};
+const IB_GROUP_MAP=(g,subj)=>
+  g===1?(/English/.test(subj)?"language_en":"language_other")
+ :g===2?(/English/.test(subj)?"language_en":"language_other")
+ :g===3?"humanity"
+ :g===4?"science"
+ :g===5?"math"
+ :(/组3/.test(subj)?"humanity":/组4/.test(subj)?"science":"arts");
+const AL_SUBJECTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics","Chemistry","Biology","Economics","Business","Computer Science","Psychology","History","Geography","English Literature","Art & Design"];
+const AL_DEFAULTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics","—"];
+const AL_GROUP=s=>/Mathematics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art/.test(s)?"arts":"humanity";
+const AP_SUBJECTS=["AP Calculus BC","AP Calculus AB","AP Statistics","AP Physics C: Mechanics","AP Physics 1","AP Chemistry","AP Biology","AP Microeconomics","AP Macroeconomics","AP Psychology","AP Computer Science A","AP English Language","AP World History","AP Art History"];
+const AP_DEFAULTS=["AP Calculus BC","AP Physics C: Mechanics","AP Chemistry","AP Computer Science A","AP Microeconomics","—"];
+const AP_GROUP=s=>/Calculus|Statistics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art History/.test(s)?"arts":"humanity";
 const GRADE_INDEX={
   myp:{"7":95,"6":85,"5":72,"4":60,"3":48,"2":36,"1":25},
   igcse:{"A*":95,"A":87,"B":77,"C":67,"D":57,"E":47,"9":96,"8":90,"7":84,"6":74,"5":64,"4":56,"3":48,"2":40,"1":32},
@@ -474,29 +485,63 @@ const mapPct=(rit,dim,g)=>{
   return Math.round(normCdf((rit-n.m)/n.sd)*100);
 };
 
-/* ---------- 输入 UI ---------- */
+/* ---------- 动态科目表单（按体系专属渲染） ---------- */
+const opt=(list,sel)=>list.map(o=>`<option value="${o}" ${o===sel?"selected":""}>${o}</option>`).join("");
 function renderSubjectInputs(){
   const sys=$("gradeSystem").value;
-  $("subjectInputs").innerHTML=SUBJECTS.map(s=>
-    `<select id="subj_${s.key}"><option value="">— ${s.label}</option>${GRADE_OPTIONS[sys].map(g=>`<option value="${g}">${s.label}：${g}</option>`).join("")}</select>`).join("");
-  document.querySelectorAll("#subjectInputs select").forEach(el=>el.addEventListener("change",saveInputs));
+  const box=$("subjectInputs");
+  if(sys==="myp"){
+    $("subjHint").textContent="IB 六大学科组（每组：科目 + HL/SL + 1–7 分，可留空）";
+    box.innerHTML=IB_GROUPS.map(g=>`
+      <div class="crow">
+        <div class="gl">${g.label}</div>
+        <select id="ib_s_${g.g}">${opt(g.opts,g.def)}</select>
+        <select id="ib_l_${g.g}"><option value="SL">SL</option><option value="HL">HL</option></select>
+        <select id="ib_v_${g.g}"><option value="">分数 —</option>${[7,6,5,4,3,2,1].map(v=>`<option value="${v}">${v} 分</option>`).join("")}</select>
+      </div>`).join("");
+  } else if(sys==="igcse"){
+    $("subjHint").textContent="A-Level 3–4 门核心课（Letter Grade；即通道 A，将自动换算等效 GPA）";
+    box.innerHTML=[1,2,3,4].map(i=>`
+      <div class="crow al">
+        <div class="gl">科目 ${i}${i<4?"<br><b>必填</b>":"<br><b>选填</b>"}</div>
+        <select id="al_s_${i}">${i===4?'<option value="—">— 不选第 4 门</option>':""}${opt(AL_SUBJECTS,AL_DEFAULTS[i-1])}</select>
+        <select id="al_v_${i}"><option value="">等级 —</option>${["A*","A","B","C","D","E"].map(v=>`<option value="${v}">${v}</option>`).join("")}</select>
+      </div>`).join("");
+    if(AL_DEFAULTS[3]==="—") $("al_s_4").value="—";
+  } else {
+    $("subjHint").textContent="AP 选修科目（校内成绩 + AP 统考分 1–5，可留空）";
+    box.innerHTML=[1,2,3,4,5,6].map(i=>`
+      <div class="crow">
+        <div class="gl">AP ${i}</div>
+        <select id="ap_s_${i}"><option value="—">— 不选</option>${opt(AP_SUBJECTS,AP_DEFAULTS[i-1]==="—"?null:AP_DEFAULTS[i-1])}</select>
+        <select id="ap_g_${i}"><option value="">校内 —</option>${["A+","A","A-","B+","B","B-","C+","C"].map(v=>`<option value="${v}">${v}</option>`).join("")}</select>
+        <select id="ap_e_${i}"><option value="none">未考</option><option value="5">统考 5</option><option value="4">统考 4</option><option value="3">统考 3</option></select>
+      </div>`).join("");
+    if(AP_DEFAULTS[5]==="—") $("ap_s_6").value="—";
+  }
+  box.querySelectorAll("select").forEach(el=>el.addEventListener("change",saveInputs));
+  const saved=LS.get("inputs",null);
+  if(saved&&saved.courseState&&saved.courseState[sys]){
+    for(const [id,v] of Object.entries(saved.courseState[sys])) if($(id)) $(id).value=v;
+  }
 }
 const INPUT_IDS=["gradeLevel","gradeSystem","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major"];
 function saveInputs(){
-  const d={};
+  const d=LS.get("inputs",{})||{};
   for(const id of INPUT_IDS) d[id]=$(id).value;
-  for(const s of SUBJECTS) d["subj_"+s.key]=$("subj_"+s.key).value;
+  d.courseState=d.courseState||{};
+  const cs={};
+  document.querySelectorAll("#subjectInputs select").forEach(el=>{cs[el.id]=el.value;});
+  d.courseState[$("gradeSystem").value]=cs;
+  d._v4=1;
   LS.set("inputs",d);
 }
 function restoreInputs(){
   const d=LS.get("inputs",null); if(!d) return false;
-  if(!d._v3){ /* 旧版语义：G8=升G9；迁移一次 */
-    if(d.gradeLevel==="G8")d.gradeLevel="G9"; else if(d.gradeLevel==="G9")d.gradeLevel="G10";
-    d._v3=1; LS.set("inputs",d);
-  }
-  if(d.gradeSystem){$("gradeSystem").value=d.gradeSystem;renderSubjectInputs();}
-  for(const id of INPUT_IDS) if(d[id]!=null) $(id).value=d[id];
-  for(const s of SUBJECTS) if(d["subj_"+s.key]) $("subj_"+s.key).value=d["subj_"+s.key];
+  if(!d._v4){ LS.set("inputs",{}); return false; } /* v8 动态表单：旧结构直接重置 */
+  if(d.gradeSystem) $("gradeSystem").value=d.gradeSystem;
+  renderSubjectInputs();
+  for(const id of INPUT_IDS) if(d[id]!=null&&$(id)) $(id).value=d[id];
   $("engScore").disabled=$("engType").value==="none";
   return true;
 }
@@ -510,8 +555,13 @@ updateCountdown();
 
 $("demoBtn").addEventListener("click",()=>{
   $("gradeSystem").value="myp"; renderSubjectInputs();
-  const demo={math:"6",engSch:"5",physics:"6",chemistry:"5",biology:"5",humanities:"6",lang2:"5",arts:"6"};
-  for(const k in demo) $("subj_"+k).value=demo[k];
+  const demo={ib_s_1:"Chinese A: Lang & Lit",ib_l_1:"SL",ib_v_1:"6",
+              ib_s_2:"English B",ib_l_2:"HL",ib_v_2:"5",
+              ib_s_3:"Economics",ib_l_3:"HL",ib_v_3:"6",
+              ib_s_4:"Physics",ib_l_4:"HL",ib_v_4:"6",
+              ib_s_5:"Math AA（分析与方法）",ib_l_5:"HL",ib_v_5:"6",
+              ib_s_6:"Visual Arts",ib_l_6:"SL",ib_v_6:"6"};
+  for(const k in demo) $(k).value=demo[k];
   $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
   $("gpaValue").value=3.6; $("gpaScale").value="4.0"; $("gpaTrend").value="rising"; $("rigor").value="challenge";
@@ -521,10 +571,35 @@ $("demoBtn").addEventListener("click",()=>{
 /* ---------- 引擎 ---------- */
 function readInput(){
   const sys=$("gradeSystem").value, grade=$("gradeLevel").value;
-  const subjects={};
-  for(const s of SUBJECTS){
-    const v=$("subj_"+s.key).value;
-    if(v) subjects[s.key]={raw:v,index:GRADE_INDEX[sys][v],label:s.label,group:s.group,core:s.core};
+  /* 按体系读取真实课程结构 → 归一化 courses */
+  const courses=[];
+  if(sys==="myp"){
+    for(const g of IB_GROUPS){
+      const subj=$(`ib_s_${g.g}`).value, lvl=$(`ib_l_${g.g}`).value, sc=$(`ib_v_${g.g}`).value;
+      if(!sc) continue;
+      const hl=lvl==="HL";
+      courses.push({name:`${subj} · ${lvl}`,subj,group:IB_GROUP_MAP(g.g,subj),hl,raw:sc,
+                    index:clamp(GRADE_INDEX.myp[sc]+(hl?3:0),0,100)});
+    }
+  } else if(sys==="igcse"){
+    for(let i=1;i<=4;i++){
+      const el=$(`al_s_${i}`); if(!el) break;
+      const subj=el.value, gr=$(`al_v_${i}`).value;
+      if(subj==="—"||!gr) continue;
+      courses.push({name:subj,subj,group:AL_GROUP(subj),hl:false,raw:gr,index:GRADE_INDEX.igcse[gr]});
+    }
+  } else {
+    for(let i=1;i<=6;i++){
+      const el=$(`ap_s_${i}`); if(!el) break;
+      const subj=el.value, sch=$(`ap_g_${i}`).value, ex=$(`ap_e_${i}`).value;
+      if(subj==="—") continue;
+      const schIdx=sch?GRADE_INDEX.us[sch]:null;
+      const exIdx=ex==="5"?97:ex==="4"?85:ex==="3"?70:null;
+      if(schIdx==null&&exIdx==null) continue;
+      courses.push({name:subj+(exIdx!=null?`（统考 ${ex}）`:""),subj,group:AP_GROUP(subj),hl:false,
+                    raw:sch||null,apExam:exIdx!=null?ex:null,
+                    index:schIdx!=null&&exIdx!=null?Math.round(schIdx*0.6+exIdx*0.4):(schIdx??exIdx)});
+    }
   }
   const engType=$("engType").value, engScore=parseFloat($("engScore").value);
   const eng=(engType!=="none"&&!isNaN(engScore))?{type:engType,score:engScore,index:interp(ENG_ANCHORS[engType],engScore)}:null;
@@ -533,27 +608,31 @@ function readInput(){
     const v=parseFloat($(id).value);
     if(!isNaN(v)) map[dim]={rit:v,pct:mapPct(v,dim,grade)};
   }
-  return {sys,grade,subjects,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
+  return {sys,grade,courses,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
           gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
 }
 
 function analyze(inp,uni){
-  const S=inp.subjects;
-  const idx=k=>S[k]?S[k].index:null;
-  const present=Object.values(S);
-  const allIdx=present.map(s=>s.index);
-  const stem=[idx("math"),idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
-  const hum=[idx("humanities"),idx("engSch"),idx("lang2")].filter(v=>v!=null);
-  const sci=[idx("physics"),idx("chemistry"),idx("biology")].filter(v=>v!=null);
+  const courses=inp.courses;
+  const byG=g=>courses.filter(c=>c.group===g);
+  const present=courses;
+  const allIdx=courses.map(c=>c.index);
+  const mathE=byG("math"), sciE=byG("science"), engE=byG("language_en");
+  const humE=[...byG("humanity"),...byG("language_other")];
+  const stem=[...mathE,...sciE].map(c=>c.index);
+  const hum=[...humE,...engE].map(c=>c.index);
+  const sci=sciE.map(c=>c.index);
   const blend=(a,b)=>a==null&&b==null?null:b==null?a:a==null?b:a*0.7+b*0.3;
-  const mathIdx=blend(idx("math"),inp.map.math?inp.map.math.pct:null);
-  const engIdx=inp.eng?inp.eng.index:blend(idx("engSch"),inp.map.reading?inp.map.reading.pct:null);
+  const mathSchool=mathE.length?mean(mathE.map(c=>c.index)):null;
+  const humSchool=humE.length?mean(humE.map(c=>c.index)):null;
+  const mathIdx=blend(mathSchool,inp.map.math?inp.map.math.pct:null);
+  const engIdx=inp.eng?inp.eng.index:blend(engE.length?mean(engE.map(c=>c.index)):null,inp.map.reading?inp.map.reading.pct:null);
 
   const depth=mathIdx!=null||sci.length?clamp(mean([mathIdx,...sci].filter(v=>v!=null))+(Math.max(mathIdx||0,...(sci.length?sci:[0]))>=90?3:0),0,100):50;
   const range=allIdx.length?Math.max(...allIdx)-Math.min(...allIdx):0;
   const breadth=allIdx.length?clamp(mean(allIdx)-range*0.35,0,100):50;
   const langAb=engIdx!=null?engIdx:50;
-  const writing=clamp((engIdx??55)*0.5+(idx("humanities")??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
+  const writing=clamp((engIdx??55)*0.5+(humSchool??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
   const inquiry=clamp((mean(sci)??55)*0.6+(inp.map.reading?inp.map.reading.pct:(engIdx??55))*0.4,0,100);
 
   /* ===== GPA 双引擎：三体系换算 + 走势/难度加权 ===== */
@@ -566,15 +645,21 @@ function analyze(inp,uni){
     gpaNote=`通道 B：校内 Transcript GPA ${gv}/${inp.gpaScale} → 标准化 ${gpa4.toFixed(2)}/4.0`;
   } else if(present.length){
     if(inp.sys==="igcse"){
-      gpa4=clamp(mean(present.map(s=>AL_GPA[s.raw]??2.0)),0,4.0);
-      gpaNote=`通道 A：Letter Grades 换算等效 GPA ${gpa4.toFixed(2)}/4.0（A*=4.0 · A=4.0 · B=3.0 · C=2.0）`;
+      gpa4=clamp(mean(present.map(c=>AL_GPA[c.raw]??2.0)),0,4.0);
+      gpaNote=`通道 A：${present.length} 门 A-Level 换算等效 GPA ${gpa4.toFixed(2)}/4.0（A*=4.0 · A=4.0 · B=3.0 · C=2.0）`;
     } else if(inp.sys==="myp"){
-      const est45=r1(mean(present.map(s=>parseFloat(s.raw)||4))*6+2);
+      const hlN=present.filter(c=>c.hl).length;
+      const est45=r1(mean(present.map(c=>parseFloat(c.raw)||4))*6+2);
       gpa4=clamp(interp([[20,2.2],[24,2.6],[28,3.0],[32,3.4],[36,3.7],[40,3.9],[43,4.0],[45,4.0]],est45),0,4.0);
-      gpaNote=`IB 动态映射：估算 DP 总分 ≈${est45}/45 → GPA ${gpa4.toFixed(2)}/4.0（${inp.rigor==="challenge"?"HL 占比高，含金量加权":"HL/SL 标准配比"}）`;
+      gpaNote=`IB 动态映射：估算 DP 总分 ≈${est45}/45 → GPA ${gpa4.toFixed(2)}/4.0（HL ${hlN} 门${hlN>=3?"，配比达标含金量加权":"，HL 配比不足 3 门"}）`;
     } else {
-      gpa4=clamp(mean(present.map(s=>US_GPA[s.raw]??2.0)),0,4.0);
-      gpaNote=`由课堂 Letter Grades 换算未加权 GPA ${gpa4.toFixed(2)}/4.0`;
+      const withSch=present.filter(c=>US_GPA[c.raw]!=null);
+      if(withSch.length){
+        gpa4=clamp(mean(withSch.map(c=>US_GPA[c.raw])),0,4.0);
+        gpaNote=`由 ${withSch.length} 门 AP 课堂成绩换算未加权 GPA ${gpa4.toFixed(2)}/4.0`;
+      }
+      const ap45=present.filter(c=>c.apExam==="5"||c.apExam==="4").length;
+      if(ap45&&gpaNote) gpaNote+=`；含 ${ap45} 门 AP 统考 4/5 分硬学分实证`;
     }
   }
   if(gpa4!=null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
@@ -632,6 +717,10 @@ function analyze(inp,uni){
   if(inp.sys==="us") add("AP",2,"校内已是美制体系，直接衔接 AP/Honors 零成本");
   if(inp.sys==="myp") add("IB",1,"校内 MYP 直升 DP，体系无缝");
   if(inp.sys==="igcse") add("A-Level",1,"校内英制，IGCSE → A-Level 直通");
+  /* 体系专属硬指标信号 */
+  if(inp.sys==="myp"&&mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)) add("IB",1,"HL Math AA 已达 6+——名校核心硬性指标锁定");
+  if(inp.sys==="igcse"&&courses.some(c=>/Further/.test(c.subj))) add("A-Level",1,"已修进阶数学（Further Maths）——牛剑/IC 理工线入场券");
+  if(inp.sys==="us"&&courses.some(c=>/Calculus BC/.test(c.subj)&&(c.apExam==="5"||c.index>=90))) add("AP",1,"AP Calculus BC 高分——硬核学分已实证");
   /* 自评偏好 */
   if(inp.pref!=="undecided") add("A-Level",1,inp.pref==="stem"?"自评偏理，适合 3-4 门垂直深耕":"自评偏文，可完全砍掉弱势理科");
   /* GPA 保护机制（A-Level 扬长避短） */
@@ -684,7 +773,10 @@ function analyze(inp,uni){
   if(inp.gpaTrend==="volatile") alerts.push("【GPA 趋势提示】GPA 起伏波动——招生官看重成绩曲线的稳定叙事，需定位波动源（选科不当/时间管理）");
   if(gpaIdx!=null&&langAb>=78&&gpaIdx<70) alerts.push("【匹配度校准】语言标化强但 GPA 偏低——防止被贴上「刷题型/学习态度」标签，优先修复校内成绩叙事");
   if(gpaIdx!=null&&gpaIdx>=85&&langAb<70) alerts.push("【匹配度校准】GPA 高但语言滞后——提防「GPA 含金量缩水」质疑，尽快用官方标化成绩背书");
-  const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!(inp.rigor==="challenge"&&mathIdx!=null&&mathIdx>=80);
+  const advMathOK = inp.sys==="myp" ? mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)
+    : inp.sys==="igcse" ? courses.some(c=>/Further/.test(c.subj)&&c.index>=77)||mathE.some(c=>c.index>=95)
+    : courses.some(c=>/Calculus BC/.test(c.subj)&&c.index>=80);
+  const needAdvMath=["eng","cs","bus"].includes(inp.major)&&!advMathOK;
   if(needAdvMath) alerts.push(`【关键选科缺失预警】申请${MAJORS[inp.major]}方向（HKU/G5/Top30）硬性要求 HL 数学 / A-Level 进阶数学 / AP 微积分 BC——当前档案未见高阶数学信号（需：挑战级难度 + 数学 A/7 以上），Roadmap 已插入高阶数学补位任务`);
 
   /* MAP 百分位诊断文本 */
@@ -714,7 +806,7 @@ function analyze(inp,uni){
   if(writing<60) gaps.push(`科研写作 ${r1(writing)} 分，距论文体系要求有距离`);
   const strengths=[];
   const sorted=present.slice().sort((a,b)=>b.index-a.index);
-  for(const su of sorted.slice(0,2)) if(su.index>=80) strengths.push(`${su.label}处于优势区（潜力指数 ${r1(su.index)}）`);
+  for(const su of sorted.slice(0,2)) if(su.index>=80) strengths.push(`${su.name} 处于优势区（潜力指数 ${r1(su.index)}）`);
   if(inp.map.math&&inp.map.math.pct>=85) strengths.push(`MAP 数学第 ${inp.map.math.pct} 百分位`);
   if(engIdx!=null&&engIdx>=78) strengths.push("学术英语已达高阶阅读门槛");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
@@ -779,18 +871,19 @@ function drawRadar(current,req){
 /* ---------- 科目条 ---------- */
 function drawBars(inp,uni){
   const rows=[];
-  for(const s of SUBJECTS){
-    const d=inp.subjects[s.key]; if(!d) continue;
-    const target=s.core?uni.req:75;
-    const ok=d.index>=target;
+  for(const c of inp.courses){
+    const core=["math","science","language_en"].includes(c.group);
+    const target=core?uni.req:75;
+    const ok=c.index>=target;
+    const label=inp.sys==="myp"?`${c.subj.replace(/（.*）/,"")}·${c.hl?"HL":"SL"}`:c.subj.replace(/（.*）/,"").replace(/^AP /,"");
     rows.push(`<div class="bar-row">
-      <div class="bar-name">${s.label}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${d.index}%"></div><div class="bar-target" style="left:${target}%"></div></div>
-      <div class="bar-val"><b>${r1(d.index)}</b> / ${target} ${ok?"✓":"差"+r1(target-d.index)}</div>
+      <div class="bar-name" title="${c.name}">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${c.index}%"></div><div class="bar-target" style="left:${target}%"></div></div>
+      <div class="bar-val"><b>${r1(c.index)}</b> / ${target} ${ok?"✓":"差"+r1(target-c.index)}</div>
     </div>`);
   }
-  $("subjectBars").innerHTML=rows.join("")||'<p class="hint">未输入校内成绩</p>';
-  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数；核心科目要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，非核心科目 75。`;
+  $("subjectBars").innerHTML=rows.join("")||'<p class="hint">未输入课程成绩</p>';
+  $("barLegend").textContent=`成绩已归一化为 0–100 潜力指数（IB 的 HL 含 +3 难度加成，AP 统考分按 40% 权重融合）；核心科目（数学/科学/英语）要求线 = ${uni.name.split(" ")[0]}准入指数 ${uni.req}，其余 75。`;
 }
 
 /* ---------- 里程碑 ---------- */
@@ -989,8 +1082,8 @@ function trackJSON(track,a,inp){
 /* ---------- 主流程 ---------- */
 function run(scroll=true){
   const inp=readInput();
-  if(!Object.keys(inp.subjects).length&&!inp.eng&&!Object.keys(inp.map).length){
-    alert("请至少输入一类数据（校内成绩 / 英语标化 / MAP）"); return;
+  if(!inp.courses.length&&!inp.eng&&!Object.keys(inp.map).length){
+    alert("请至少输入一类数据（课程成绩 / 英语标化 / MAP）"); return;
   }
   const a=analyze(inp,targetUni);
   lastA=a; lastInp=inp;
@@ -1063,6 +1156,11 @@ function run(scroll=true){
       conversion_note:a.gpaNote||"未提供数据",
     },
     cross_alerts:a.alerts,
+    course_profile:{
+      curriculum_system:inp.sys==="myp"?"IB (MYP/DP)":inp.sys==="igcse"?"A-Level":"AP",
+      courses:inp.courses.map(c=>({subject:c.subj,level:inp.sys==="myp"?(c.hl?"HL":"SL"):undefined,
+        grade:c.raw??undefined,ap_exam_score:c.apExam??undefined,group:c.group,index:c.index})),
+    },
     recommended_route_engine:{
       primary_route:a.route==="IB"?"IB DP":a.route,
       reasoning_logic:a.reason,
@@ -1088,7 +1186,7 @@ $("runBtn").addEventListener("click",()=>run(true));
 $("printBtn").addEventListener("click",()=>window.print());
 if(hadSaved){
   const inp=readInput();
-  if(Object.keys(inp.subjects).length||inp.eng||Object.keys(inp.map).length) run(false);
+  if(inp.courses.length||inp.eng||Object.keys(inp.map).length) run(false);
 }
 </script>
 </body>
