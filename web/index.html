@@ -280,12 +280,22 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
           </select>
           <input type="number" id="engScore" placeholder="分数" step="0.5" style="flex:1" disabled>
         </div>
+        <div class="hint" id="engWarn" style="display:none;color:var(--s6);font-weight:600"></div>
       </div>
-      <label>MAP Test（RIT，可留空）</label>
-      <div class="grid3" style="margin-bottom:10px">
-        <div><label for="mapReading">Reading 阅读</label><input type="number" id="mapReading" placeholder="225"></div>
-        <div><label for="mapLang">Language 语言</label><input type="number" id="mapLang" placeholder="222"></div>
-        <div><label for="mapMath">Math 数学</label><input type="number" id="mapMath" placeholder="235"></div>
+      <div id="mapBlock">
+        <label>MAP Test（RIT，可留空）</label>
+        <div class="grid3" style="margin-bottom:10px">
+          <div><label for="mapReading">Reading 阅读</label><input type="number" id="mapReading" placeholder="225"></div>
+          <div><label for="mapLang">Language 语言</label><input type="number" id="mapLang" placeholder="222"></div>
+          <div><label for="mapMath">Math 数学</label><input type="number" id="mapMath" placeholder="235"></div>
+        </div>
+      </div>
+      <div id="satBlock" style="display:none">
+        <label>SAT / ACT（高年级核心标化，可留空）</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <select id="satType" style="flex:1"><option value="sat">SAT</option><option value="act">ACT</option></select>
+          <input type="number" id="satScore" placeholder="如 1500" style="flex:1.4">
+        </div>
       </div>
       <div class="sec">❹ 目标与专业（目标大学在上方 ① 选择）</div>
       <div class="grid3">
@@ -756,7 +766,51 @@ $("compChips").addEventListener("click",e=>{
   b.classList.toggle("sel");
   saveInputs();
 });
-const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","leadership","research","summer"];
+const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","satType","satScore","pref","routeIntent","major","leadership","research","summer"];
+/* BUG1：语言分数实时校验提示（不合法值同时被 readInput 量程守卫拒绝采信） */
+function validateEng(){
+  const t=$("engType").value, r=ENG_RANGE[t], v=parseFloat($("engScore").value), w=$("engWarn");
+  let msg="";
+  if(r&&!isNaN(v)&&(v<r.min||v>r.max)){
+    msg=t==="ielts"?"⚠️ 雅思满分为 9.0，若为托福成绩请先切换考试类型"
+       :t==="toefl"?"⚠️ 托福分数范围 0–120，请核对"
+       :"⚠️ 小托福分数范围 600–900，请核对";
+  }
+  w.textContent=msg; w.style.display=msg?"block":"none";
+}
+/* SAT/ACT 量程 */
+const SAT_RANGE={sat:{min:400,max:1600,step:10,ph:"如 1500"},act:{min:1,max:36,step:1,ph:"如 34"}};
+function updateSatAttrs(clear){
+  const r=SAT_RANGE[$("satType").value];
+  $("satScore").min=r.min; $("satScore").max=r.max; $("satScore").step=r.step; $("satScore").placeholder=r.ph;
+  const v=parseFloat($("satScore").value);
+  if(clear&&!isNaN(v)&&(v<r.min||v>r.max)) $("satScore").value="";
+}
+/* BUG2+BUG3：年级×体系互斥（探索期仅 G8/G9）· MAP 仅 ≤G10，G11/12 换 SAT/ACT · 高年级意向路线锁定为当前体系 */
+const SYS_ROUTE={myp:"ib",igcse:"alevel",us:"ap"};
+function updateGradeSysRules(){
+  const sys=$("gradeSystem").value;
+  const allow=sys==="explore"?["G8","G9"]:["G8","G9","G10","G11","G12"];
+  [...$("gradeLevel").options].forEach(o=>o.disabled=!allow.includes(o.value));
+  if(!allow.includes($("gradeLevel").value)){ $("gradeLevel").value="G9"; updateCountdown(); }
+  const hi=["G11","G12"].includes($("gradeLevel").value);
+  $("mapBlock").style.display=hi?"none":"";
+  $("satBlock").style.display=hi?"":"none";
+  const ri=$("routeIntent");
+  if(hi&&SYS_ROUTE[sys]){ ri.value=SYS_ROUTE[sys]; ri.disabled=true; }
+  else ri.disabled=false;
+}
+/* BUG4：科目「—」时统考分/课程等级清空并禁用 */
+function applySubjRowStates(){
+  for(let i=1;i<=6;i++){
+    const s=$(`ap_s_${i}`);
+    if(s){ const off=s.value==="—"; const e=$(`ap_e_${i}`),g=$(`ap_g_${i}`);
+      if(e){ e.disabled=off; if(off) e.value="none"; }
+      if(g){ g.disabled=off; if(off) g.value=""; } }
+    const as=$(`al_s_${i}`);
+    if(as){ const off=as.value==="—"; const v=$(`al_v_${i}`); if(v){ v.disabled=off; if(off) v.value=""; } }
+  }
+}
 /* 学术英语量程按考试类型限定（IELTS 0-9 · TOEFL 0-120 · 小托福 600-900），切换类型时越界值清空 */
 const ENG_RANGE={ielts:{min:1,max:9,step:0.5,ph:"如 6.5"},toefl:{min:0,max:120,step:1,ph:"如 100"},tofj:{min:600,max:900,step:5,ph:"如 850"}};
 function updateEngAttrs(clear){
@@ -792,25 +846,27 @@ function restoreInputs(){
   updateEngAttrs(false);
   return true;
 }
-$("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();updateResearchOpts();saveInputs();});
-$("engType").addEventListener("change",()=>{updateEngAttrs(true);saveInputs();});
+$("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();updateResearchOpts();updateGradeSysRules();applySubjRowStates();saveInputs();});
+$("engType").addEventListener("change",()=>{updateEngAttrs(true);validateEng();saveInputs();});
+$("engScore").addEventListener("input",validateEng);
+$("satType").addEventListener("change",()=>updateSatAttrs(true));
 for(const id of INPUT_IDS) $(id).addEventListener("change",saveInputs);
 for(const id of ["gpaValue","gpaScale"]) $(id).addEventListener("change",saveInputs);
-/* 科目选「—」时清空同行残留的统考分 / 课程等级 */
+/* 科目切换 →「—」行清空并禁用统考分/课程等级 */
 $("subjectInputs").addEventListener("change",e=>{
-  const m=e.target.id&&e.target.id.match(/^(ap|al)_s_(\d)$/);
-  if(!m||e.target.value!=="—") return;
-  if(m[1]==="ap"){ if($(`ap_e_${m[2]}`)) $(`ap_e_${m[2]}`).value="none"; if($(`ap_g_${m[2]}`)) $(`ap_g_${m[2]}`).value=""; }
-  else if($(`al_v_${m[2]}`)) $(`al_v_${m[2]}`).value="";
-  saveInputs();
+  if(e.target.id&&/^(ap|al)_s_\d$/.test(e.target.id)){ applySubjRowStates(); saveInputs(); }
 });
-$("gradeLevel").addEventListener("change",updateCountdown);
+$("gradeLevel").addEventListener("change",()=>{updateCountdown();updateGradeSysRules();});
 $("major").addEventListener("change",renderCompChips);
 renderSubjectInputs();
 renderCompChips();
 const hadSaved=restoreInputs();
 updateResearchOpts();
 updateEngAttrs(false);
+updateSatAttrs(false);
+updateGradeSysRules();
+applySubjRowStates();
+validateEng();
 updateCountdown();
 
 $("demoBtn").addEventListener("click",()=>{
@@ -842,6 +898,8 @@ $("demoBtn").addEventListener("click",()=>{
   $("gpaValue").value=GDEMO[0]; $("gpaScale").value=GDEMO[1]; $("gpaTrend").value="rising"; $("rigor").value="challenge";
   selComps=["sic"]; renderCompChips();
   $("leadership").value="leader"; $("research").value="mentored"; $("summer").value="academic";
+  updateGradeSysRules(); applySubjRowStates(); validateEng();
+  if(["G11","G12"].includes($("gradeLevel").value)){ $("satType").value="sat"; updateSatAttrs(false); $("satScore").value=1500; }
   saveInputs();
 });
 
@@ -886,12 +944,18 @@ function readInput(){
   const engType=$("engType").value, engScore=parseFloat($("engScore").value);
   const er=ENG_RANGE[engType];
   const eng=(engType!=="none"&&!isNaN(engScore)&&(!er||(engScore>=er.min&&engScore<=er.max)))?{type:engType,score:engScore,index:interp(ENG_ANCHORS[engType],engScore)}:null;
+  const hi=["G11","G12"].includes(grade);
   const map={};
-  for(const [id,dim] of [["mapReading","reading"],["mapLang","lang"],["mapMath","math"]]){
+  if(!hi) for(const [id,dim] of [["mapReading","reading"],["mapLang","lang"],["mapMath","math"]]){
     const v=parseFloat($(id).value);
     if(!isNaN(v)) map[dim]={rit:v,pct:mapPct(v,dim,grade)};
   }
-  return {sys,grade,courses,eng,map,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
+  /* G11/12：MAP 停用，SAT/ACT 为核心标化 */
+  const SAT_ANCHORS={sat:[[1000,55],[1200,70],[1350,82],[1450,90],[1500,94],[1550,98],[1600,99]],act:[[20,55],[24,68],[28,80],[32,88],[34,94],[36,99]]};
+  const satType=$("satType").value, satScore=parseFloat($("satScore").value);
+  const sr=SAT_RANGE[satType];
+  const sat=(hi&&!isNaN(satScore)&&satScore>=sr.min&&satScore<=sr.max)?{type:satType,score:satScore,index:r1(clamp(interp(SAT_ANCHORS[satType],satScore),0,100))}:null;
+  return {sys,grade,courses,eng,map,sat,pref:$("pref").value,routeIntent:$("routeIntent").value,major:$("major").value,
           schoolTier:$("schoolTier").value,
           comps:selComps.slice(),leadership:$("leadership").value,research:$("research").value,summer:$("summer").value,
           gpaValue:$("gpaValue").value,gpaScale:$("gpaScale").value,gpaTrend:$("gpaTrend").value,rigor:$("rigor").value};
@@ -917,7 +981,8 @@ function analyze(inp,uni){
   const depth=mathIdx!=null||sci.length?clamp(mean([mathIdx,...sci].filter(v=>v!=null))+(Math.max(mathIdx||0,...(sci.length?sci:[0]))>=90?3:0),0,100):50;
   const range=allIdx.length?Math.max(...allIdx)-Math.min(...allIdx):0;
   const breadth=allIdx.length?clamp(mean(allIdx)-range*0.35,0,100):50;
-  const langAb=engIdx!=null?engIdx:50;
+  const satIdx=inp.sat?inp.sat.index:null;
+  const langAb=(engIdx!=null||satIdx!=null)?mean([engIdx,satIdx].filter(v=>v!=null)):50;
   const writing=clamp((engIdx??55)*0.5+(humSchool??55)*0.3+(mean(sci)??55)*0.2-8,0,100);
   const inquiry=clamp((mean(sci)??55)*0.6+(inp.map.reading?inp.map.reading.pct:(engIdx??55))*0.4,0,100);
 
@@ -1207,7 +1272,9 @@ function analyze(inp,uni){
     mM?`Math ${mM.rit}（第 ${mM.pct} 百分位${mM.rit>=235?"，≥235 → 具备超前修 IGCSE Add Math / AP Calculus 潜力":""}）`:null,
     mR?`Reading ${mR.rit}（第 ${mR.pct} 百分位${mR.rit>=225?"，≥225 → 可承载 EE/AP 人文学术阅读量":"，<225 → 中高年级学术阅读承载力待验证"}）`:null,
     mL?`Language ${mL.rit}（第 ${mL.pct} 百分位）`:null,
-  ].filter(Boolean).join("；") : "未提供 MAP 数据——建议 3 个月内补测，校准学术潜力基线";
+  ].filter(Boolean).join("；")
+  : eG>=11 ? (inp.sat?`${inp.sat.type.toUpperCase()} ${inp.sat.score}（标化等效指数 ${inp.sat.index}——高年级以 SAT/ACT 替代 MAP 口径）`:"高年级以 SAT/ACT 为核心标化——尚未提供，建议尽快首考出分")
+  : "未提供 MAP 数据——建议 3 个月内补测，校准学术潜力基线";
 
   /* 达标度与概率 */
   const msDone=Object.keys(LS.get("milestones",{})).length;
@@ -1591,9 +1658,13 @@ function trackJSON(track,a,inp){
 /* ---------- 主流程 ---------- */
 function run(scroll=true){
   const inp=readInput();
-  if(!inp.courses.length&&!inp.eng&&!Object.keys(inp.map).length){
-    alert("请至少输入一类数据（课程成绩 / 英语标化 / MAP）"); return;
+  if(!inp.courses.length&&!inp.eng&&!Object.keys(inp.map).length&&!inp.sat){
+    alert("请至少输入一类数据（课程成绩 / 英语标化 / MAP / SAT）"); return;
   }
+  /* 学科偏好校验：硬核理科选科（FM / Physics HL / Calc BC）+ MAP Math≥235 却选「偏文」→ 轻量提示 */
+  if(scroll&&inp.pref==="hum"&&inp.map.math&&inp.map.math.rit>=235&&
+     inp.courses.some(c=>(/Further|Calculus BC/.test(c.subj)&&c.index>=77)||(/Physics/.test(c.subj)&&c.hl)))
+    alert("检测到您的理科/数学选科极强，系统将优先按理科/商科量化方向为您生成诊断报告");
   const a=analyze(inp,targetUni);
   lastA=a; lastInp=inp;
   $("results").style.display="block";
