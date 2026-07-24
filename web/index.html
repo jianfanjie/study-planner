@@ -633,6 +633,7 @@ function readInput(){
 }
 
 function analyze(inp,uni){
+  const eG=GRADE_NUM[inp.grade]||9;   /* 今年 9 月升入的年级（时间轴权重用） */
   const courses=inp.courses;
   const byG=g=>courses.filter(c=>c.group===g);
   const present=courses;
@@ -702,6 +703,11 @@ function analyze(inp,uni){
   /* 新五维：GPA硬实力 · 标化语言 · 学科深度/竞赛 · 探究与写作 · 软实力活动 */
   const current=[gpaHard,r1(langAb),r1(depth),r1((writing+inquiry)/2),r1(soft)];
   const overall=r1(mean(current));
+  /* BUG1 修复：能力梯队与学术画像由基础硬实力（GPA/MAP/语言）决定，跨体系统一，不随科目数量坍塌 */
+  const mapArr=[inp.map.reading,inp.map.lang,inp.map.math].filter(Boolean).map(m=>m.pct);
+  const mapAvg=mapArr.length?mean(mapArr):null;
+  const baseParts=[gpaIdx,mapAvg,engIdx].filter(v=>v!=null);
+  const overallBase=baseParts.length?r1(mean(baseParts)):overall;
 
   const na=uni.region==="us"||uni.region==="ca";   // 北美：GPA+广度评估模型
   const k=uni.req/(na?90:93);
@@ -715,6 +721,7 @@ function analyze(inp,uni){
   const spread=spreadOf();
   /* A-Level 3 门达标即可申请：3 门且全 ≥B 时视为有效样本，不做“数据不足”误判 */
   const alThreeOK = inp.sys==="igcse"&&allIdx.length>=3&&Math.min(...allIdx)>=77;
+  const enoughCourses = allIdx.length>=4||alThreeOK;
   if(allIdx.length>=4||alThreeOK){
     const mn=Math.min(...allIdx);
     if(alThreeOK&&allIdx.length===3) add("A-Level",1,"3 门 A-Level 全部 ≥B——精修配置已达申请有效门槛");
@@ -735,7 +742,8 @@ function analyze(inp,uni){
   if(mM&&mM.rit>=235){ add("A-Level",1,`MAP Math ${mM.rit} ≥235：具备超前修 IGCSE Additional Math 的潜力`); add("AP",1,`MAP Math ${mM.rit} ≥235：可提前自学 AP Calculus 刷硬学分`); }
   if(mR&&mR.rit>=225) add("IB",1,`MAP Reading ${mR.rit} ≥225：达到承载 EE / AP 人文学术阅读量的硬指标`);
   const readLag = mR&&mM&&(mM.rit-mR.rit>=12);
-  if(readLag) add("A-Level",1,`MAP Reading（${mR.rit}）显著低于 Math（${mM.rit}）——回避写作密集型体系更稳`);
+  /* BUG4 修复：低年级（G8/G9）阅读差距 = 积累期信号，不做“劝退”判定 */
+  if(readLag&&eG>=11) add("A-Level",1,`MAP Reading（${mR.rit}）显著低于 Math（${mM.rit}）——高年级阶段回避写作密集型体系更稳`);
   /* 英语与写作 */
   if(engIdx!=null&&engIdx>=70) add("IB",1,"托福 80 / 雅思 6.0 已达，能应对 EE/TOK 论文量");
   else if(engIdx!=null&&engIdx<63) add("A-Level",1,"学术英语待补，现阶段避开 IB 论文体系更稳");
@@ -771,7 +779,7 @@ function analyze(inp,uni){
   let route=ranked[0][0];
   const alt=ranked[1][0];
   const lead=ranked[0][1]-ranked[1][1];
-  let confidence=clamp(55+lead*9,55,95);
+  let confidence=clamp(50+lead*8,50,95);   /* 差 0→50 · 差 1→58 · 差 2→66 … */
   const INTENT={alevel:"A-Level",ib:"IB",ap:"AP"};
   let intentNote="";
   if(inp.routeIntent!=="undecided"){
@@ -779,17 +787,24 @@ function analyze(inp,uni){
     if(want!==route){ intentNote=`已按你的意向锁定 ${want}（引擎数据画像更偏 ${route}，信号 ${s[route]}:${s[want]}，建议定线前复核）。`; route=want; confidence=Math.min(confidence,70); }
     else intentNote="意向与数据画像一致。";
   }
-  let reason=(intentNote?intentNote+" ":"")+factors.filter(f=>f.route===route).sort((a,b)=>b.w-a.w).slice(0,3).map(f=>f.label).join("；")+(lead===0?"。⚠️ 首选与备选信号持平，建议双轨观察至定线窗口":"。");
-  if((GRADE_NUM[inp.grade]||9)>=11) reason+=" ⚠️ 已过定线窗口，此推荐用于校验当前就读路线是否最优。";
+  if(!enoughCourses) confidence=Math.min(confidence,65);   /* BUG1：课程样本不足只降置信度，不降能力梯队 */
+  /* BUG3 修复：信号持平（差 ≤1）且置信度 <60 → 双轨黄金观察期，不盲目偏向单轨 */
+  const dualTrack = inp.routeIntent==="undecided" && lead<=1 && confidence<60;
+  let reason=(intentNote?intentNote+" ":"")+factors.filter(f=>f.route===route).sort((a,b)=>b.w-a.w).slice(0,3).map(f=>f.label).join("；")+"。";
+  if(dualTrack) reason=`${route} 与 ${alt} 信号持平（${s[route]}:${s[alt]}），当前处于双轨黄金观察期——建议两轨并行观察，定线窗口延长至 G10 上学期再复评。 `+reason;
+  if(!enoughCourses) reason+=" （当前体系课程样本不足——仅影响路线置信度，不影响能力梯队定位。）";
+  if(eG>=11) reason+=" ⚠️ 已过定线窗口，此推荐用于校验当前就读路线是否最优。";
 
-  /* 学术画像四分型（与梯队定级对齐：Tier 2 及以上的均衡画像 = 全面卓越型） */
-  const acadType = spread>=8?"偏科偏理型" : spread<=-8?"偏科偏文型"
-    : (overall>=75&&range<=25)?"全面卓越型" : "基础待提升型";
+  /* 学术画像四分型：由基础硬实力统一判定；偏科倾向优先用课程数据，样本不足时退用 MAP 文理差 */
+  const lean = enoughCourses ? spread
+    : (inp.map.math&&inp.map.reading ? (inp.map.math.pct-inp.map.reading.pct)*0.6 : 0);
+  const acadType = lean>=8?"偏科偏理型" : lean<=-8?"偏科偏文型"
+    : overallBase>=75?"全面卓越型" : "基础待提升型";
 
   /* IB 木桶风险（文理差 ≥2 个分数段 或 Reading 显著落后 Math 时必须预警） */
   const ibRisks=[];
   if(Math.abs(spread)>=20) ibRisks.push(`文理分差 ${r1(Math.abs(spread))} 个指数点（≈2 个分数段），IB 木桶效应下弱科将拖垮总分`);
-  if(readLag) ibRisks.push(`MAP Reading（${mR.rit}）显著低于 Math（${mM.rit}），EE 4000 字与 TOK 论文将是最大学术痛点`);
+  if(readLag&&eG>=11) ibRisks.push(`MAP Reading（${mR.rit}）显著低于 Math（${mM.rit}），EE 4000 字与 TOK 论文将是最大学术痛点`);
   if(route==="IB"&&ibRisks.length) reason+=` ⚠️ IB 学术风险：${ibRisks[0]}。`;
   if(route==="A-Level"&&Math.abs(spread)>=15) reason+=" （扬长避短，保护 GPA 稳健度）";
 
@@ -808,6 +823,7 @@ function analyze(inp,uni){
   if(inp.gpaTrend==="volatile") alerts.push("【GPA 趋势提示】GPA 起伏波动——招生官看重成绩曲线的稳定叙事，需定位波动源（选科不当/时间管理）");
   if(gpaIdx!=null&&langAb>=78&&gpaIdx<70) alerts.push("【匹配度校准】语言标化强但 GPA 偏低——防止被贴上「刷题型/学习态度」标签，优先修复校内成绩叙事");
   if(gpaIdx!=null&&gpaIdx>=85&&langAb<70) alerts.push("【匹配度校准】GPA 高但语言滞后——提防「GPA 含金量缩水」质疑，尽快用官方标化成绩背书");
+  if(readLag&&eG<=10) alerts.push(`【阅读积累提示】MAP Reading（${mR.rit}）低于 Math（${mM.rit}），但目前处于阅读语言积累黄金期——建议每月 1 本英文原著 + 精读笔记补强短板，暂无需回避写作类体系`);
   /* IB 专属硬性诊断（HKU/G5 真实选科门槛） */
   let ibGate=false;
   if(inp.sys==="myp"){
@@ -848,12 +864,24 @@ function analyze(inp,uni){
     : clamp(depth*0.45+gpaHard*0.3+langAb*0.25+(alStemSig?3:0),0,100);
   const readiness=r1(clamp(score/uni.req*100,0,100));
   const ratio=score/uni.req;
-  /* 连续概率估算：分数或目标校任何变化都会反映到数值上 */
-  const probPct=r1(clamp(interp([[0.70,8],[0.78,20],[0.85,35],[0.90,50],[0.95,62],[1.00,75],[1.08,85]],ratio),3,88));
+  /* BUG2 修复：概率按申请地区分曲线折算——美本综合评价封顶 25%，英港学术硬指标导向可达 55–70% */
+  const PROB_CURVE={
+    us:[[0.70,3],[0.85,8],[0.95,15],[1.00,20],[1.10,25]],
+    hk:[[0.70,8],[0.80,25],[0.90,55],[1.00,66],[1.08,70]],
+    uk:[[0.70,5],[0.80,18],[0.90,45],[1.00,60],[1.08,70]],
+    ca:[[0.70,6],[0.85,20],[0.95,35],[1.05,48]],
+    au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
+  };
+  const probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
   const prob=`≈ ${probPct}%`;
-  const probSub=(probPct>=70?"已达门槛线，冲刺更高排名":probPct>=50?"接近门槛，按路线图执行可达":probPct>=30?"有差距，2 年窗口内可弥合":"地基期，概率随里程碑达成动态上修")+`（按 ${uni.name.split(" ")[0]}准入线 ${uni.req} 折算）`;
+  const probSub=(uni.region==="us"
+    ? "美本为综合评价：学术达标只是入场券（概率硬性封顶 25%），活动/文书/科研软背景决定上限"
+    : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
+    : probPct>=30?"有差距，2 年窗口内可弥合"
+    : "地基期，概率随里程碑达成动态上修")
+    +`（按 ${uni.name.split(" ")[0]}准入线 ${uni.req} 折算）`;
   let level;
-  if(overall>=85)level="卓越梯队 Tier 1";else if(overall>=75)level="优秀梯队 Tier 2";else if(overall>=63)level="潜力梯队 Tier 3";else level="地基构筑期 Tier 4";
+  if(overallBase>=85)level="卓越梯队 Tier 1";else if(overallBase>=75)level="优秀梯队 Tier 2";else if(overallBase>=63)level="潜力梯队 Tier 3";else level="地基构筑期 Tier 4";
 
   const gaps=[];
   if(mathIdx!=null&&mathIdx<uni.req) gaps.push(`数学距 ${uni.name.split(" ")[0]}准入线差 ${r1(uni.req-mathIdx)} 分`);
@@ -868,7 +896,7 @@ function analyze(inp,uni){
   if(alStemSig) strengths.push("进阶数学/物理 A*-A——申港/申英理工申请核心强信号");
   if(!strengths.length) strengths.push("暂无显著尖峰科目，处于地基培育期");
 
-  return {current,reqProfile,route,alt,confidence,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall,level,gaps,strengths,spread,range,
+  return {current,reqProfile,route,alt,confidence,dualTrack,reason,risk,acadType,mapAnalysis,ibRisks,alerts,scores:s,factors,score:r1(score),readiness,prob,probSub,overall:overallBase,level,gaps,strengths,spread,range,
           gpa4,gpaWeighted,gpaNote,ibEst45,ibHlN,trendLabel:TREND_LABEL[inp.gpaTrend],trendDeclining,needAdvMath,
           mathGap:mathIdx!=null&&mathIdx<85,engGap:engIdx==null||engIdx<78,uni};
 }
@@ -1146,14 +1174,19 @@ function run(scroll=true){
   lastA=a; lastInp=inp;
   $("results").style.display="block";
   updateCountdown();
-  $("heroRoute").textContent="AI 推荐 "+a.route;
+  $("heroRoute").textContent=a.dualTrack?`双轨观察（${a.route}/${a.alt}）`:"AI 推荐 "+a.route;
   /* AI 卡片 */
   const rc=css(ROUTE_COLOR[a.route]);
   document.querySelector(".ai").style.borderColor=rc;
   semiGauge("confGauge",a.confidence,rc,a.confidence,"",44,10);
-  $("aiRoute").textContent=a.route+" 路线";
+  if(a.dualTrack){
+    $("aiRoute").textContent=`${a.route} / ${a.alt} · 双轨黄金观察期`;
+    $("aiAlt").textContent=`信号持平（${a.scores[a.route]}:${a.scores[a.alt]}）——建议双轨并行，定线窗口延长至 G10 上学期（Year 11 前）复评`;
+  } else {
+    $("aiRoute").textContent=a.route+" 路线";
+    $("aiAlt").textContent=`备选路线：${a.alt}（信号 ${a.scores[a.alt]}）`;
+  }
   $("aiRoute").style.color=rc;
-  $("aiAlt").textContent=`备选路线：${a.alt}（信号 ${a.scores[a.alt]}）`;
   $("aiReason").textContent=a.reason;
   $("aiRisk").textContent="⚠️ 风险预警："+a.risk;
   const tot=a.scores["A-Level"]+a.scores["IB"]+a.scores["AP"]||1;
@@ -1226,6 +1259,8 @@ function run(scroll=true){
       risk_warning:a.risk,
       confidence_score:a.confidence,
       alternative_route:a.alt,
+      dual_track_mode:a.dualTrack,
+      dual_track_advice:a.dualTrack?`${a.route}/${a.alt} 信号持平——双轨黄金观察期，建议定线窗口延长至 G10 上学期`:undefined,
     },
     subject_combination_recommendation:{
       major:MAJORS[mk],
