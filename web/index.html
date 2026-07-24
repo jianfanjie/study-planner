@@ -892,13 +892,30 @@ function analyze(inp,uni){
   if(route==="IB"&&ibRisks.length) reason+=` ⚠️ IB 学术风险：${ibRisks[0]}。`;
   if(route==="A-Level"&&Math.abs(spread)>=15) reason+=" （扬长避短，保护 GPA 稳健度）";
 
-  /* 路线风险预警（每条路线都有真实痛点，拒绝只说好话） */
-  const RISKS={
-    "IB": ibRisks.length?ibRisks.join("；")+"。":"IB 两年 EE/TOK/IA/CAS 多线程并行，时间管理失控是最常见崩盘点；HL 科目选错难以中途更换。",
-    "A-Level":"申请美国 Top 30 时，A-Level 在综合评价（课程广度/活动叙事）上弱于 IB/AP 体系，需用高含金量竞赛与科研补位；英港方向大考一旦失手，重考窗口有限。",
-    "AP":"AP 属社会考试、无学校课程体系兜底，完全依赖超前自学与自律；美本录取中 GPA/活动/文书与 AP 同权重，单靠 AP 分数不构成录取优势。",
-  };
-  const risk=RISKS[route];
+  /* 路线风险预警：按【所选目标校地区 × 学生实际数据】定制生成——未申请的地区绝不出现 */
+  const selRegions=new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>u.region));
+  const toUKHK=selRegions.has("uk")||selRegions.has("hk");
+  const uShort=uni.name.split(" ")[0];
+  const riskParts=[];
+  if(route==="A-Level"){
+    if(toUKHK) riskParts.push(`${uShort}要求 ${uni.al}——A-Level 大考容错低，A2 一旦失手重考窗口有限，AS 阶段必须先锁定预测分安全垫`);
+    if(inp.sys==="igcse"&&courses.length===3) riskParts.push("3 门精修配置没有备用科目，任何一门失手都会直接击穿申请组合——可评估加修第 4 门作保险");
+    if(selRegions.has("us")) riskParts.push("兼申美国方向时，A-Level 在课程广度/活动叙事上弱于 IB/AP，需用高含金量竞赛与科研补位");
+    if((selRegions.has("ca")||selRegions.has("au"))&&!toUKHK) riskParts.push("加/澳方向以预估分（PG）换算录取——校内预估口径与最终大考的差值是主要风险，需提前与学校确认 PG 政策");
+    if(!riskParts.length) riskParts.push("A-Level 的集中度既是优势也是风险——科目一旦选错，转向成本高，选科前务必用试学验证");
+  } else if(route==="IB"){
+    if(ibRisks.length) riskParts.push(...ibRisks);
+    if(inp.sys==="myp"&&ibHlN>=4) riskParts.push(`当前 ${ibHlN} 门 HL 配置——学术负荷高于常规 3HL，GPA 曲线需按月盯防`);
+    if(writing<70) riskParts.push(`科研写作基底 ${r1(writing)} 分——EE（4000 字扩展论文）与 TOK 将是两年内最大的单点压力`);
+    else if(!ibRisks.length) riskParts.push("EE/TOK/IA/CAS 多线程并行，时间管理失控是 IB 最常见崩盘点——需从现在建立周计划体系");
+    if(toUKHK) riskParts.push(`${uShort}要求 IB ${uni.ib}——HL 科目必须稳定在 6–7 分，5 月大考无重考缓冲`);
+  } else {
+    if(selRegions.has("us")) riskParts.push("AP 属社会考试、无学校课程体系兜底，完全依赖超前自学与自律；美本录取中 GPA/活动/文书与 AP 同权重，单靠分数不构成优势");
+    if(toUKHK) riskParts.push(`兼申英港时 AP 换算吃亏：${uShort}要求 ${uni.ap}——需 5 分矩阵 + SAT 高分双保险`);
+    if(inp.rigor==="standard") riskParts.push("当前为标准级课表——AP 超前自学负荷大，建议先转入 Honors/挑战级课程过渡");
+    if(!riskParts.length) riskParts.push("AP 自由组合的代价是无体系兜底——选考节奏与备考完全依赖自我管理");
+  }
+  const risk=riskParts.slice(0,3).join("；")+"。";
 
   /* ===== 交叉预警与诊断（Cross-Verification & Risk Alert） ===== */
   const alerts=[];
