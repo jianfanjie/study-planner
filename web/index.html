@@ -625,10 +625,12 @@ const GPA_PLACEHOLDER={myp:"如 38",igcse:"如 88",us:"如 3.7",explore:"如 88"
 function renderSubjectInputs(){
   const sys=$("gradeSystem").value;
   const box=$("subjectInputs");
-  const prevScale=$("gpaScale").value;
   const scales=GPA_SCALES[sys]||GPA_SCALES.us;
   $("gpaScale").innerHTML=scales.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
-  $("gpaScale").value=scales.some(([v])=>v===prevScale)?prevScale:scales[0][0];
+  /* GPA 值/量表按体系分开记忆：切体系载入该体系已存值，否则清空并用主量表（避免 3.6/4.0 带进 IB） */
+  const gst=((LS.get("inputs",{})||{}).gpaState||{})[sys];
+  if(gst&&scales.some(([v])=>v===gst.s)){ $("gpaScale").value=gst.s; $("gpaValue").value=gst.v; }
+  else { $("gpaScale").value=scales[0][0]; $("gpaValue").value=""; }
   $("gpaValue").placeholder=GPA_PLACEHOLDER[sys]||"如 3.7";
   $("gpaChannelHint").textContent = sys==="igcse" ? "（可选：百分制均分或美式 Transcript）" : sys==="myp" ? "（可留空：填 DP 预估总分或 IB 均分）" : "（可留空）";
   $("gpaSysNote").textContent = sys==="igcse"
@@ -754,11 +756,23 @@ $("compChips").addEventListener("click",e=>{
   b.classList.toggle("sel");
   saveInputs();
 });
-const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaValue","gpaScale","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","leadership","research","summer"];
+const INPUT_IDS=["gradeLevel","gradeSystem","schoolTier","gpaTrend","rigor","engType","engScore","mapReading","mapLang","mapMath","pref","routeIntent","major","leadership","research","summer"];
+/* 学术英语量程按考试类型限定（IELTS 0-9 · TOEFL 0-120 · 小托福 600-900），切换类型时越界值清空 */
+const ENG_RANGE={ielts:{min:1,max:9,step:0.5,ph:"如 6.5"},toefl:{min:0,max:120,step:1,ph:"如 100"},tofj:{min:600,max:900,step:5,ph:"如 850"}};
+function updateEngAttrs(clear){
+  const t=$("engType").value, r=ENG_RANGE[t];
+  $("engScore").disabled=t==="none";
+  if(!r){ if(clear) $("engScore").value=""; return; }
+  $("engScore").min=r.min; $("engScore").max=r.max; $("engScore").step=r.step; $("engScore").placeholder=r.ph;
+  const v=parseFloat($("engScore").value);
+  if(clear&&!isNaN(v)&&(v<r.min||v>r.max)) $("engScore").value="";
+}
 function saveInputs(){
   const d=LS.get("inputs",{})||{};
   for(const id of INPUT_IDS) d[id]=$(id).value;
   d.comps=selComps;
+  d.gpaState=d.gpaState||{};
+  d.gpaState[$("gradeSystem").value]={v:$("gpaValue").value,s:$("gpaScale").value};
   d.courseState=d.courseState||{};
   const cs={};
   document.querySelectorAll("#subjectInputs select, #subjectInputs input").forEach(el=>{cs[el.id]=el.value;});
@@ -770,22 +784,33 @@ function restoreInputs(){
   const d=LS.get("inputs",null); if(!d) return false;
   if(!d._v4){ LS.set("inputs",{}); return false; } /* v8 动态表单：旧结构直接重置 */
   if(d.gradeSystem) $("gradeSystem").value=d.gradeSystem;
+  if(!d.gpaState&&d.gpaValue){ d.gpaState={[d.gradeSystem||"us"]:{v:d.gpaValue,s:d.gpaScale||"4.0"}}; LS.set("inputs",d); } /* 旧结构迁移 */
   renderSubjectInputs();
   for(const id of INPUT_IDS) if(d[id]!=null&&$(id)) $(id).value=d[id];
   selComps=(Array.isArray(d.comps)?d.comps:[]).filter(id=>COMP_BY_ID[id]);
   renderCompChips();
-  $("engScore").disabled=$("engType").value==="none";
+  updateEngAttrs(false);
   return true;
 }
 $("gradeSystem").addEventListener("change",()=>{renderSubjectInputs();updateResearchOpts();saveInputs();});
-$("engType").addEventListener("change",()=>{$("engScore").disabled=$("engType").value==="none";saveInputs();});
+$("engType").addEventListener("change",()=>{updateEngAttrs(true);saveInputs();});
 for(const id of INPUT_IDS) $(id).addEventListener("change",saveInputs);
+for(const id of ["gpaValue","gpaScale"]) $(id).addEventListener("change",saveInputs);
+/* 科目选「—」时清空同行残留的统考分 / 课程等级 */
+$("subjectInputs").addEventListener("change",e=>{
+  const m=e.target.id&&e.target.id.match(/^(ap|al)_s_(\d)$/);
+  if(!m||e.target.value!=="—") return;
+  if(m[1]==="ap"){ if($(`ap_e_${m[2]}`)) $(`ap_e_${m[2]}`).value="none"; if($(`ap_g_${m[2]}`)) $(`ap_g_${m[2]}`).value=""; }
+  else if($(`al_v_${m[2]}`)) $(`al_v_${m[2]}`).value="";
+  saveInputs();
+});
 $("gradeLevel").addEventListener("change",updateCountdown);
 $("major").addEventListener("change",renderCompChips);
 renderSubjectInputs();
 renderCompChips();
 const hadSaved=restoreInputs();
 updateResearchOpts();
+updateEngAttrs(false);
 updateCountdown();
 
 $("demoBtn").addEventListener("click",()=>{
@@ -811,7 +836,7 @@ $("demoBtn").addEventListener("click",()=>{
     explore:{exp_stem:"92",exp_hum:"84"},
   }[sys];
   for(const k in DEMOS) if($(k)) $(k).value=DEMOS[k];
-  $("engType").value="toefl"; $("engScore").disabled=false; $("engScore").value=85;
+  $("engType").value="toefl"; updateEngAttrs(false); $("engScore").value=85;
   $("mapReading").value=224; $("mapLang").value=220; $("mapMath").value=238;
   const GDEMO={myp:["38","45"],igcse:["88","100"],us:["3.6","4.0"],explore:["88","100"]}[sys];
   $("gpaValue").value=GDEMO[0]; $("gpaScale").value=GDEMO[1]; $("gpaTrend").value="rising"; $("rigor").value="challenge";
@@ -859,7 +884,8 @@ function readInput(){
     }
   }
   const engType=$("engType").value, engScore=parseFloat($("engScore").value);
-  const eng=(engType!=="none"&&!isNaN(engScore))?{type:engType,score:engScore,index:interp(ENG_ANCHORS[engType],engScore)}:null;
+  const er=ENG_RANGE[engType];
+  const eng=(engType!=="none"&&!isNaN(engScore)&&(!er||(engScore>=er.min&&engScore<=er.max)))?{type:engType,score:engScore,index:interp(ENG_ANCHORS[engType],engScore)}:null;
   const map={};
   for(const [id,dim] of [["mapReading","reading"],["mapLang","lang"],["mapMath","math"]]){
     const v=parseFloat($(id).value);
