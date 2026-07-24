@@ -78,6 +78,15 @@ button.btn:hover{filter:brightness(1.06)}
 .tug-lab .k{display:inline-flex;align-items:center;gap:5px}
 .swatch{width:9px;height:9px;border-radius:3px;display:inline-block}
 .factor{display:inline-block;font-size:11px;border-radius:99px;padding:1px 9px;margin:4px 4px 0 0;border:1px solid var(--border);color:var(--ink-2)}
+.fac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:12px}
+.fac-col{border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--page)}
+.fac-head{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;margin-bottom:4px}
+.fac-head .tot{margin-left:auto;font-size:17px}
+.fac-item{display:flex;gap:7px;font-size:12px;color:var(--ink-2);padding:4px 0;border-top:1px dashed var(--grid);align-items:baseline;line-height:1.45}
+.fac-w{flex:none;font-weight:700;font-size:11px;border-radius:5px;padding:0 5px}
+.mp-row{display:grid;grid-template-columns:minmax(72px,auto) 1fr auto;gap:8px;align-items:center;padding:3px 0;font-size:12px}
+.mp-track{height:8px;background:var(--grid);border-radius:4px;position:relative}
+.mp-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--s1)}
 /* visual row */
 .vrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
 .vcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center}
@@ -575,13 +584,13 @@ function renderSubjectInputs(){
       </div>`).join("");
     if(AL_DEFAULTS[3]==="—") $("al_s_4").value="—";
   } else {
-    $("subjHint").textContent="AP 选修科目（校内成绩 + AP 统考分 1–5，可留空）";
+    $("subjHint").textContent="AP 选修科目（统考/预估分为 5 分制主指标；校内课程等级仅用于 GPA 换算，可留空）";
     box.innerHTML=[1,2,3,4,5,6].map(i=>`
       <div class="crow">
         <div class="gl">AP ${i}</div>
         <select id="ap_s_${i}"><option value="—">— 不选</option>${opt(AP_SUBJECTS,AP_DEFAULTS[i-1]==="—"?null:AP_DEFAULTS[i-1])}</select>
-        <select id="ap_g_${i}"><option value="">校内 —</option>${["A+","A","A-","B+","B","B-","C+","C"].map(v=>`<option value="${v}">${v}</option>`).join("")}</select>
-        <select id="ap_e_${i}"><option value="none">未考</option><option value="5">统考 5</option><option value="4">统考 4</option><option value="3">统考 3</option></select>
+        <select id="ap_e_${i}"><option value="none">统考 —</option>${[5,4,3,2,1].map(v=>`<option value="${v}">${v} 分</option>`).join("")}</select>
+        <select id="ap_g_${i}"><option value="">课程等级 —</option>${["A+","A","A-","B+","B","B-","C+","C"].map(v=>`<option value="${v}">${v}</option>`).join("")}</select>
       </div>`).join("");
     if(AP_DEFAULTS[5]==="—") $("ap_s_6").value="—";
   }
@@ -679,7 +688,7 @@ function readInput(){
       const subj=el.value, sch=$(`ap_g_${i}`).value, ex=$(`ap_e_${i}`).value;
       if(subj==="—") continue;
       const schIdx=sch?GRADE_INDEX.us[sch]:null;
-      const exIdx=ex==="5"?97:ex==="4"?85:ex==="3"?70:null;
+      const exIdx=({"5":97,"4":85,"3":70,"2":50,"1":35})[ex]??null;
       if(schIdx==null&&exIdx==null) continue;
       courses.push({name:subj+(exIdx!=null?`（统考 ${ex}）`:""),subj,group:AP_GROUP(subj),hl:false,
                     raw:sch||null,apExam:exIdx!=null?ex:null,
@@ -904,11 +913,13 @@ function analyze(inp,uni){
 
   /* 路线风险预警：按【所选目标校地区 × 学生实际数据】定制生成——未申请的地区绝不出现 */
   const selRegions=new Set(UNIS.filter(u=>targetUnis.includes(u.id)).map(u=>u.region));
-  const toUKHK=selRegions.has("uk")||selRegions.has("hk");
-  const uShort=uni.name.split(" ")[0];
+  /* 引用英港门槛时，必须取所选校中门槛最高的英/港学校本身，而非主对标校 */
+  const ukhkU=UNIS.filter(u=>targetUnis.includes(u.id)&&(u.region==="uk"||u.region==="hk")).sort((x,y)=>y.req-x.req)[0]||null;
+  const toUKHK=!!ukhkU;
+  const ukhkShort=ukhkU?ukhkU.name.split(" ")[0]:"";
   const riskParts=[];
   if(route==="A-Level"){
-    if(toUKHK) riskParts.push(`${uShort}要求 ${uni.al}——A-Level 大考容错低，A2 一旦失手重考窗口有限，AS 阶段必须先锁定预测分安全垫`);
+    if(toUKHK) riskParts.push(`${ukhkShort}要求 ${ukhkU.al}——A-Level 大考容错低，A2 一旦失手重考窗口有限，AS 阶段必须先锁定预测分安全垫`);
     if(inp.sys==="igcse"&&courses.length===3) riskParts.push("3 门精修配置没有备用科目，任何一门失手都会直接击穿申请组合——可评估加修第 4 门作保险");
     if(selRegions.has("us")) riskParts.push("兼申美国方向时，A-Level 在课程广度/活动叙事上弱于 IB/AP，需用高含金量竞赛与科研补位");
     if((selRegions.has("ca")||selRegions.has("au"))&&!toUKHK) riskParts.push("加/澳方向以预估分（PG）换算录取——校内预估口径与最终大考的差值是主要风险，需提前与学校确认 PG 政策");
@@ -918,10 +929,10 @@ function analyze(inp,uni){
     if(inp.sys==="myp"&&ibHlN>=4) riskParts.push(`当前 ${ibHlN} 门 HL 配置——学术负荷高于常规 3HL，GPA 曲线需按月盯防`);
     if(writing<70) riskParts.push(`科研写作基底 ${r1(writing)} 分——EE（4000 字扩展论文）与 TOK 将是两年内最大的单点压力`);
     else if(!ibRisks.length) riskParts.push("EE/TOK/IA/CAS 多线程并行，时间管理失控是 IB 最常见崩盘点——需从现在建立周计划体系");
-    if(toUKHK) riskParts.push(`${uShort}要求 IB ${uni.ib}——HL 科目必须稳定在 6–7 分，5 月大考无重考缓冲`);
+    if(toUKHK) riskParts.push(`${ukhkShort}要求 IB ${ukhkU.ib}——HL 科目必须稳定在 6–7 分，5 月大考无重考缓冲`);
   } else {
     if(selRegions.has("us")) riskParts.push("AP 属社会考试、无学校课程体系兜底，完全依赖超前自学与自律；美本录取中 GPA/活动/文书与 AP 同权重，单靠分数不构成优势");
-    if(toUKHK) riskParts.push(`兼申英港时 AP 换算吃亏：${uShort}要求 ${uni.ap}——需 5 分矩阵 + SAT 高分双保险`);
+    if(toUKHK) riskParts.push(`兼申英港时 AP 换算吃亏：${ukhkShort}要求 ${ukhkU.ap}——需 5 分矩阵 + SAT 高分双保险`);
     if(inp.rigor==="standard") riskParts.push("当前为标准级课表——AP 超前自学负荷大，建议先转入 Honors/挑战级课程过渡");
     if(!riskParts.length) riskParts.push("AP 自由组合的代价是无体系兜底——选考节奏与备考完全依赖自我管理");
   }
@@ -1319,7 +1330,14 @@ function run(scroll=true){
   const tot=a.scores["A-Level"]+a.scores["IB"]+a.scores["AP"]||1;
   $("tug").innerHTML=["A-Level","IB","AP"].map(t=>`<div style="width:${a.scores[t]/tot*100}%;background:${css(ROUTE_COLOR[t])}"></div>`).join("");
   $("tugLab").innerHTML=["A-Level","IB","AP"].map(t=>`<span class="k"><span class="swatch" style="background:${css(ROUTE_COLOR[t])}"></span>${t} 信号 ${a.scores[t]}</span>`).join("");
-  $("factorChips").innerHTML=a.factors.map(f=>`<span class="factor" style="border-color:${css(ROUTE_COLOR[f.route])};color:${f.route==="IB"?css("--good-text"):css(ROUTE_COLOR[f.route])}">${f.route} +${f.w} · ${f.label}</span>`).join("");
+  /* 信号积分榜：三栏分列，按权重排序，一眼看清各轨得分来源 */
+  $("factorChips").innerHTML=`<div class="fac-grid">`+["A-Level","IB","AP"].map(t=>{
+    const col=css(ROUTE_COLOR[t]);
+    const fs=a.factors.filter(f=>f.route===t).sort((x,y)=>y.w-x.w);
+    return `<div class="fac-col" style="${t===a.route?`border-color:${col}`:""}">
+      <div class="fac-head" style="color:${col}">${t===a.route?"🌟 ":""}${t}<span class="tot">${a.scores[t]} 分</span></div>
+      ${fs.map(f=>`<div class="fac-item"><span class="fac-w" style="color:${col};background:color-mix(in srgb,${col} 12%,transparent)">+${f.w}</span><span>${f.label}</span></div>`).join("")||'<div class="fac-item" style="color:var(--muted)">本轨暂无加分信号</div>'}
+    </div>`;}).join("")+`</div>`;
   /* 选科组合 */
   const mk=(inp.major&&inp.major!=="undecided")?inp.major:inferMajor(a);
   const C=COMBO[mk];
@@ -1361,13 +1379,14 @@ function run(scroll=true){
   $("alPgLine").textContent = a.alPg ? `🎯 预估 A-Level 匹配区间：${a.alPg}` : "";
   $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ ${a.dualTrack?`推荐路线：${a.route} / ${a.alt} 双轨观察`:`推荐路线：${a.route}`} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
   drawBars(inp,targetUni,a.reqEff);
-  /* 联申概率一览 */
-  if(targetUnis.length>1){
-    const rows=UNIS.filter(u=>targetUnis.includes(u.id)).sort((x,y)=>y.req-x.req)
-      .map(u=>{const r=u.id===targetUni.id?a:analyze(inp,u);
-        return `<span style="display:inline-block;margin:2px 10px 2px 0">${u.id===targetUni.id?"★ ":""}${u.name.split(" ")[0]} <b>${r.prob}</b></span>`;}).join("");
-    $("multiProb").innerHTML=`<div style="color:var(--muted);margin-bottom:2px">联申概率一览（★ = 主对标校）：</div>`+rows;
-  } else $("multiProb").innerHTML="";
+  /* 各校录取概率：每所选中的目标校一行概率条 */
+  const selU=UNIS.filter(u=>targetUnis.includes(u.id)).sort((x,y)=>y.req-x.req);
+  $("multiProb").innerHTML=(selU.length>1?`<div style="color:var(--muted);margin-bottom:3px">各校录取概率（★ = 主对标校）：</div>`:"")+
+    selU.map(u=>{
+      const r=u.id===targetUni.id?a:analyze(inp,u);
+      const p=Math.min(parseInt(r.prob.replace(/[^\d]/g,""))||0,100);
+      return `<div class="mp-row"><span>${u.id===targetUni.id&&selU.length>1?"★ ":""}${u.name.split(" ")[0]}</span><div class="mp-track"><div class="mp-fill" style="width:${p}%"></div></div><b>${r.prob}</b></div>`;
+    }).join("");
   $("roadUni").textContent=targetUni.name;
   renderRoadTabs(a);
   /* JSON */
