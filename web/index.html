@@ -238,18 +238,18 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
         <div style="display:flex;gap:8px">
           <select id="engType" style="flex:1.2">
             <option value="none">暂无成绩</option>
-            <option value="ielts">IELTS</option>
-            <option value="toefl">TOEFL</option>
-            <option value="tofj">TOEFL Junior</option>
+            <option value="ielts">IELTS 雅思</option>
+            <option value="toefl">TOEFL 托福</option>
+            <option value="tofj">TOEFL Junior 小托福</option>
           </select>
           <input type="number" id="engScore" placeholder="分数" step="0.5" style="flex:1" disabled>
         </div>
       </div>
       <label>MAP Test（RIT，可留空）</label>
       <div class="grid3" style="margin-bottom:10px">
-        <div><label for="mapReading">Reading</label><input type="number" id="mapReading" placeholder="225"></div>
-        <div><label for="mapLang">Language</label><input type="number" id="mapLang" placeholder="222"></div>
-        <div><label for="mapMath">Math</label><input type="number" id="mapMath" placeholder="235"></div>
+        <div><label for="mapReading">Reading 阅读</label><input type="number" id="mapReading" placeholder="225"></div>
+        <div><label for="mapLang">Language 语言</label><input type="number" id="mapLang" placeholder="222"></div>
+        <div><label for="mapMath">Math 数学</label><input type="number" id="mapMath" placeholder="235"></div>
       </div>
       <div class="sec">❹ 目标与专业（目标大学在上方 ① 选择）</div>
       <div class="grid3">
@@ -455,12 +455,12 @@ function updateCountdown(){
 
 /* ---------- 三体系真实科目定义 ---------- */
 const IB_GROUPS=[
-  {g:1,label:"Group 1<br><b>语言 A</b>",opts:["Chinese A: Lang & Lit","English A: Lang & Lit"],def:"Chinese A: Lang & Lit"},
-  {g:2,label:"Group 2<br><b>语言 B</b>",opts:["English B","Spanish B","French B"],def:"English B"},
-  {g:3,label:"Group 3<br><b>人文社科</b>",opts:["Economics","History","Psychology","Business Management","Geography"],def:"Economics"},
-  {g:4,label:"Group 4<br><b>实验科学</b>",opts:["Physics","Chemistry","Biology","Computer Science"],def:"Physics"},
+  {g:1,label:"Group 1<br><b>语言 A</b>",opts:["Chinese A: Lang & Lit（中文语言与文学）","English A: Lang & Lit（英语语言与文学）"],def:"Chinese A: Lang & Lit（中文语言与文学）"},
+  {g:2,label:"Group 2<br><b>语言 B</b>",opts:["English B（英语 B）","Spanish B（西班牙语 B）","French B（法语 B）"],def:"English B（英语 B）"},
+  {g:3,label:"Group 3<br><b>人文社科</b>",opts:["Economics（经济）","History（历史）","Psychology（心理学）","Business Management（商业管理）","Geography（地理）"],def:"Economics（经济）"},
+  {g:4,label:"Group 4<br><b>实验科学</b>",opts:["Physics（物理）","Chemistry（化学）","Biology（生物）","Computer Science（计算机科学）"],def:"Physics（物理）"},
   {g:5,label:"Group 5<br><b>数学 ★</b>",opts:["Math AA（分析与方法）","Math AI（应用与解释）"],def:"Math AA（分析与方法）"},
-  {g:6,label:"Group 6<br><b>艺术/选修</b>",opts:["Visual Arts","Music","增选组3（Econ/History）","增选组4（Chem/Bio）"],def:"Visual Arts"},
+  {g:6,label:"Group 6<br><b>艺术/选修</b>",opts:["Visual Arts（视觉艺术）","Music（音乐）","增选组3（Econ/History）","增选组4（Chem/Bio）"],def:"Visual Arts（视觉艺术）"},
 ];
 const IB_GROUP_MAP=(g,subj)=>
   g===1?(/English/.test(subj)?"language_en":"language_other")
@@ -469,11 +469,11 @@ const IB_GROUP_MAP=(g,subj)=>
  :g===4?"science"
  :g===5?"math"
  :(/组3/.test(subj)?"humanity":/组4/.test(subj)?"science":"arts");
-const AL_SUBJECTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics","Chemistry","Biology","Economics","Business","Computer Science","Psychology","History","Geography","English Literature","Art & Design"];
-const AL_DEFAULTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics","—"];
+const AL_SUBJECTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics（物理）","Chemistry（化学）","Biology（生物）","Economics（经济）","Business（商科）","Computer Science（计算机科学）","Psychology（心理学）","History（历史）","Geography（地理）","English Literature（英国文学）","Art & Design（艺术与设计）"];
+const AL_DEFAULTS=["Mathematics（基础数学）","Further Mathematics（进阶数学）","Physics（物理）","—"];
 const AL_GROUP=s=>/Mathematics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art/.test(s)?"arts":"humanity";
-const AP_SUBJECTS=["AP Calculus BC","AP Calculus AB","AP Statistics","AP Physics C: Mechanics","AP Physics 1","AP Chemistry","AP Biology","AP Microeconomics","AP Macroeconomics","AP Psychology","AP Computer Science A","AP English Language","AP World History","AP Art History"];
-const AP_DEFAULTS=["AP Calculus BC","AP Physics C: Mechanics","AP Chemistry","AP Computer Science A","AP Microeconomics","—"];
+const AP_SUBJECTS=["AP Calculus BC（微积分 BC）","AP Calculus AB（微积分 AB）","AP Statistics（统计学）","AP Physics C: Mechanics（物理 C·力学）","AP Physics 1（物理 1）","AP Chemistry（化学）","AP Biology（生物）","AP Microeconomics（微观经济）","AP Macroeconomics（宏观经济）","AP Psychology（心理学）","AP Computer Science A（计算机科学 A）","AP English Language（英语语言与写作）","AP World History（世界历史）","AP Art History（艺术史）"];
+const AP_DEFAULTS=["AP Calculus BC（微积分 BC）","AP Physics C: Mechanics（物理 C·力学）","AP Chemistry（化学）","AP Computer Science A（计算机科学 A）","AP Microeconomics（微观经济）","—"];
 const AP_GROUP=s=>/Calculus|Statistics/.test(s)?"math":/Physics|Chemistry|Biology|Computer/.test(s)?"science":/English/.test(s)?"language_en":/Art History/.test(s)?"arts":"humanity";
 const GRADE_INDEX={
   myp:{"7":95,"6":85,"5":72,"4":60,"3":48,"2":36,"1":25},
@@ -613,21 +613,21 @@ $("demoBtn").addEventListener("click",()=>{
   const sys=$("gradeSystem").value;          /* 按当前体系填充对应示例 */
   renderSubjectInputs();
   const DEMOS={
-    myp:{ib_s_1:"Chinese A: Lang & Lit",ib_l_1:"SL",ib_v_1:"6",
-         ib_s_2:"English B",ib_l_2:"HL",ib_v_2:"5",
-         ib_s_3:"Economics",ib_l_3:"HL",ib_v_3:"6",
-         ib_s_4:"Physics",ib_l_4:"HL",ib_v_4:"6",
+    myp:{ib_s_1:"Chinese A: Lang & Lit（中文语言与文学）",ib_l_1:"SL",ib_v_1:"6",
+         ib_s_2:"English B（英语 B）",ib_l_2:"HL",ib_v_2:"5",
+         ib_s_3:"Economics（经济）",ib_l_3:"HL",ib_v_3:"6",
+         ib_s_4:"Physics（物理）",ib_l_4:"HL",ib_v_4:"6",
          ib_s_5:"Math AA（分析与方法）",ib_l_5:"HL",ib_v_5:"6",
-         ib_s_6:"Visual Arts",ib_l_6:"SL",ib_v_6:"6"},
+         ib_s_6:"Visual Arts（视觉艺术）",ib_l_6:"SL",ib_v_6:"6"},
     igcse:{al_s_1:"Mathematics（基础数学）",al_v_1:"A*",
            al_s_2:"Further Mathematics（进阶数学）",al_v_2:"A",
-           al_s_3:"Physics",al_v_3:"A",
+           al_s_3:"Physics（物理）",al_v_3:"A",
            al_s_4:"—"},
-    us:{ap_s_1:"AP Calculus BC",ap_g_1:"A",ap_e_1:"5",
-        ap_s_2:"AP Physics C: Mechanics",ap_g_2:"A-",ap_e_2:"4",
-        ap_s_3:"AP Chemistry",ap_g_3:"B+",ap_e_3:"none",
-        ap_s_4:"AP Computer Science A",ap_g_4:"A",ap_e_4:"4",
-        ap_s_5:"AP Microeconomics",ap_g_5:"A-",ap_e_5:"none",
+    us:{ap_s_1:"AP Calculus BC（微积分 BC）",ap_g_1:"A",ap_e_1:"5",
+        ap_s_2:"AP Physics C: Mechanics（物理 C·力学）",ap_g_2:"A-",ap_e_2:"4",
+        ap_s_3:"AP Chemistry（化学）",ap_g_3:"B+",ap_e_3:"none",
+        ap_s_4:"AP Computer Science A（计算机科学 A）",ap_g_4:"A",ap_e_4:"4",
+        ap_s_5:"AP Microeconomics（微观经济）",ap_g_5:"A-",ap_e_5:"none",
         ap_s_6:"—"},
     explore:{exp_stem:"92",exp_hum:"84"},
   }[sys];
@@ -845,7 +845,7 @@ function analyze(inp,uni){
   if(inp.sys==="myp"&&mathE.some(c=>c.hl&&/AA/.test(c.subj)&&c.index>=85)) add("IB",1,"HL Math AA 已达 6+——名校核心硬性指标锁定");
   if(inp.sys==="igcse"&&courses.some(c=>/Further/.test(c.subj))) add("A-Level",1,"已修进阶数学（Further Maths）——牛剑/IC 理工线入场券");
   /* FM / Physics 达 A*-A：申港（HKU）/申英（G5）理工线置信度上调 */
-  const alStemSig = inp.sys==="igcse"&&courses.some(c=>(/Further/.test(c.subj)||c.subj==="Physics")&&c.index>=87);
+  const alStemSig = inp.sys==="igcse"&&courses.some(c=>(/Further/.test(c.subj)||/^Physics/.test(c.subj))&&c.index>=87);
   if(alStemSig&&(uni.region==="hk"||uni.region==="uk")) add("A-Level",2,"进阶数学/物理达 A*-A——申港（HKU）/申英（G5）理工科成功率强信号");
   if(inp.sys==="us"&&courses.some(c=>/Calculus BC/.test(c.subj)&&(c.apExam==="5"||c.index>=90))) add("AP",1,"AP Calculus BC 高分——硬核学分已实证");
   /* 自评偏好 */
@@ -1047,7 +1047,7 @@ function drawBars(inp,uni,reqEff){
     const core=["math","science","language_en"].includes(c.group);
     const target=core?(reqEff||uni.req):75;
     const ok=c.index>=target;
-    const label=inp.sys==="myp"?`${c.subj.replace(/（.*）/,"")}·${c.hl?"HL":"SL"}`:c.subj.replace(/（.*）/,"").replace(/^AP /,"");
+    const label=(inp.sys==="myp"?`${c.subj}·${c.hl?"HL":"SL"}`:c.subj).replace(/^AP /,"").replace(": Lang & Lit","");
     rows.push(`<div class="bar-row">
       <div class="bar-name" title="${c.name}">${label}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${c.index}%"></div><div class="bar-target" style="left:${target}%"></div></div>
@@ -1095,35 +1095,35 @@ document.addEventListener("change",e=>{
 /* ---------- 专业方向 → 选科组合库 ---------- */
 const MAJORS={undecided:"未定",eng:"工程",cs:"计算机",bus:"商科 / 经济",med:"医学 / 生化",hum:"人文 / 社科",art:"艺术 / 设计"};
 const COMBO={
-  eng:{al:["Mathematics","Further Mathematics","Physics","Economics（第 4 门备选）"],
-       ib:["HL：Math AA · Physics · Chemistry","SL：English · 二语 · Economics"],
-       ap:["Calculus BC","Physics C（力学+电磁）","Chemistry","Statistics"],
-       comp:["AMC → AIME","BPhO / 物理碗","iGEM（可选）"],
+  eng:{al:["Mathematics（数学）","Further Mathematics（进阶数学）","Physics（物理）","Economics（经济·第 4 门备选）"],
+       ib:["HL：Math AA（分析数学）· Physics（物理）· Chemistry（化学）","SL：English（英语）· 二语 · Economics（经济）"],
+       ap:["Calculus BC（微积分 BC）","Physics C（物理·力学+电磁）","Chemistry（化学）","Statistics（统计）"],
+       comp:["AMC → AIME（美国数学竞赛）","BPhO（英国物理奥赛）/ 物理碗","iGEM（基因工程赛·可选）"],
        note:"帝国理工/剑桥工程普遍要求 Math+Physics 双 A*；IB 必须选 HL Math AA 方向。"},
-  cs:{al:["Mathematics","Further Mathematics","Computer Science / Physics","Economics 备选"],
-      ib:["HL：Math AA · Computer Science · Physics","SL：English · 二语 · Econ"],
-      ap:["Calculus BC","Computer Science A","Physics C","Statistics"],
-      comp:["AMC → AIME","USACO 晋级线","开源项目 / Kaggle"],
+  cs:{al:["Mathematics（数学）","Further Mathematics（进阶数学）","Computer Science（计算机）/ Physics（物理）","Economics（经济）备选"],
+      ib:["HL：Math AA（分析数学）· Computer Science（计算机）· Physics（物理）","SL：English（英语）· 二语 · Economics（经济）"],
+      ap:["Calculus BC（微积分 BC）","Computer Science A（计算机科学 A）","Physics C（物理 C）","Statistics（统计）"],
+      comp:["AMC → AIME（美国数学竞赛）","USACO（美国信息学奥赛）晋级线","开源项目 / Kaggle 数据赛"],
       note:"牛剑 CS 需 MAT/STEP 高分；美国 CS 竞争极烈，需科研或开源项目背书。"},
-  bus:{al:["Mathematics","Economics","Further Maths / History","第 4 门自由配置"],
-       ib:["HL：Math AA/AI · Economics · English","SL：二语 · 科学 · 人文"],
-       ap:["Calculus BC","微观 + 宏观经济学","Statistics","Psychology 备选"],
-       comp:["NEC 全美经济挑战","IEO 经济奥赛","SIC 投资挑战 / FBLA"],
+  bus:{al:["Mathematics（数学）","Economics（经济）","Further Maths（进阶数学）/ History（历史）","第 4 门自由配置"],
+       ib:["HL：Math AA/AI（数学）· Economics（经济）· English（英语）","SL：二语 · 科学 · 人文"],
+       ap:["Calculus BC（微积分 BC）","Micro/Macroeconomics（微观+宏观经济）","Statistics（统计）","Psychology（心理学）备选"],
+       comp:["NEC（全美经济挑战赛）","IEO（国际经济奥赛）","SIC 投资挑战 / FBLA 商赛"],
        note:"LSE / 港大商科对数学硬性要求 A*/7；文书需真实商业实践案例。"},
-  med:{al:["Chemistry","Biology","Mathematics","Physics 备选"],
-       ib:["HL：Chemistry · Biology · Math","SL：English · 二语 · 人文"],
-       ap:["Chemistry","Biology","Calculus BC","Psychology"],
-       comp:["UKChO","BBO 生物奥赛","BrainBee / iGEM"],
+  med:{al:["Chemistry（化学）","Biology（生物）","Mathematics（数学）","Physics（物理）备选"],
+       ib:["HL：Chemistry（化学）· Biology（生物）· Math（数学）","SL：English（英语）· 二语 · 人文"],
+       ap:["Chemistry（化学）","Biology（生物）","Calculus BC（微积分 BC）","Psychology（心理学）"],
+       comp:["UKChO（英国化学奥赛）","BBO（英国生物奥赛）","BrainBee（脑科学大赛）/ iGEM"],
        note:"英港医学院需另考 UCAT/BMAT；化学是三轨通用的硬门槛科目。"},
-  hum:{al:["History","English Literature","Economics / Geography","二语备选"],
-       ib:["HL：History · English · Economics","SL：Math AI · 二语 · 科学"],
-       ap:["World History","English Lang & Comp","Psychology","Micro/Macro Econ"],
-       comp:["John Locke 论文竞赛","Harvard MUN","NHD 历史竞赛"],
+  hum:{al:["History（历史）","English Literature（英国文学）","Economics（经济）/ Geography（地理）","二语备选"],
+       ib:["HL：History（历史）· English（英语）· Economics（经济）","SL：Math AI（应用数学）· 二语 · 科学"],
+       ap:["World History（世界历史）","English Lang & Comp（英语语言与写作）","Psychology（心理学）","Micro/Macro Econ（经济）"],
+       comp:["John Locke（约翰·洛克论文竞赛）","Harvard MUN（哈佛模联）","NHD（美国国家历史日竞赛）"],
        note:"人文方向核心竞争力 = 写作样本 + 论文竞赛奖项，尽早积累。"},
-  art:{al:["Art & Design","Mathematics","English / History","以作品集为核心"],
-       ib:["HL：Visual Arts · English · 人文","SL：Math AI · 二语 · 科学"],
-       ap:["Studio Art（2D/3D）","Art History","English Lang"],
-       comp:["Scholastic Art & Writing Awards","作品集竞赛 / 夏校驻留"],
+  art:{al:["Art & Design（艺术与设计）","Mathematics（数学）","English（英语）/ History（历史）","以作品集为核心"],
+       ib:["HL：Visual Arts（视觉艺术）· English（英语）· 人文","SL：Math AI（应用数学）· 二语 · 科学"],
+       ap:["Studio Art（工作室艺术 2D/3D）","Art History（艺术史）","English Language（英语语言）"],
+       comp:["Scholastic Art & Writing Awards（美国学术艺术写作奖）","作品集竞赛 / 夏校驻留"],
        note:"艺术方向录取权重约 60% 在作品集（Portfolio），需 12–18 个月打磨。"},
 };
 const inferMajor=a=> a.spread>=10?"eng" : a.spread<=-10?"hum" : "bus";
@@ -1156,7 +1156,7 @@ function trackNodes(track,a,inp){
       p0:["学术英语强化（批判阅读+词汇）","探究式小课题 1 个（培养反思习惯）"],
       p1:["MYP 科学探究 + 实验报告链","500 字论证写作"],
       p2:["MAP 三项均衡冲 230+","MYP 各科稳 6–7 分",a.engGap?"TOEFL 冲 80 / IELTS 6.0（EE/TOK 门槛）":"TOEFL 95+ 巩固"],
-      p3:["MYP Personal Project 冲 6–7 分","确定 3 HL + 3 SL 选科组合","IELTS 首考 6.5"],
+      p3:["MYP Personal Project（个人课题）冲 6–7 分","确定 3 HL + 3 SL 选科组合","IELTS 首考 6.5"],
       pd:["PP 终评 + MYP eAssessment 出分 → 注册 IB DP"],
       p4:["DP 上半程：HL 科目 6+ · EE 选题定稿 · TOK 预研 · CAS 立项","IELTS 7.0"],
       p5:[applyStr+"（IB 预测分 ≥40）","EE 终稿提交"],
@@ -1182,7 +1182,7 @@ function trackNodes(track,a,inp){
   /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
   const SUMMER={
     "A-Level":{10:["IGCSE 选科确认（6–8 门）","数理真题预热"],11:["AS 教材预习（Math/FM/Physics）","竞赛备赛：AMC12 / 物理杯"],12:["预测分冲刺复习","PS 文书初稿"]},
-    "IB":{10:["Personal Project 选题预研","学术写作预热"],11:["EE 方向预研 + HL 预习","CAS 长期项目构思"],12:["EE 终稿冲刺","PS/文书初稿"]},
+    "IB":{10:["Personal Project（个人课题）选题预研","学术写作预热"],11:["EE 方向预研 + HL 预习","CAS 长期项目构思"],12:["EE 终稿冲刺","PS/文书初稿"]},
     "AP":{10:["首批 AP 预习（微积分 BC）","SAT 词汇启动"],11:["高阶 AP 预习（CS/经济）","SAT 系统刷题启动"],12:["Common App 文书初稿","SAT 最后冲分"]},
   };
   const P8=["学习习惯与时间管理体系搭建","英文原著阅读 · 词汇 3000→5000","数学衔接（Pre-Algebra → Algebra I）"];
@@ -1192,7 +1192,7 @@ function trackNodes(track,a,inp){
     ? ["出具《体系定线决策报告》（试学反馈 + 综合画像 + 目标校匹配）","正式注册对应高中体系（IB / A-Level / AP）"]
     : {
     "A-Level":["锁定 IGCSE 6–8 门（MAP Math ≥235 者必加选 Additional Math）","确认数理提前修读计划"],
-    "IB":["锁定 MYP→DP 直升预备 + Personal Project 选题池","确认 HL 候选科目（数学 AA/AI 定向）"],
+    "IB":["锁定 MYP→DP 直升预备 + Personal Project（个人课题）选题池","确认 HL 候选科目（数学 AA/AI 定向）"],
     "AP":["锁定 G10 首批 AP ≥2 门（Calculus AB/BC + 1 门理科）","确认 Honors 课表与超前自学计划"],
   }[track];
   const nodes=[];
