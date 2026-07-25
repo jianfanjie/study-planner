@@ -1,0 +1,13 @@
+{
+  "name": "学业规划 · 三轨智能仪表盘",
+  "short_name": "学业规划",
+  "description": "香港国际学校三轨（IB / A-Level / AP）升学规划与录取概率诊断",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f9f9f7",
+  "theme_color": "#2a78d6",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

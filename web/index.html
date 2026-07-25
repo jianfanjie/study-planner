@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>学业规划 · 三轨智能仪表盘</title>
 <style>
 :root{
@@ -192,6 +195,11 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
   <div>
     <h1>学业规划 · 三轨智能仪表盘</h1>
     <div class="sub">目标：<b id="heroUni">香港大学 HKU</b> · <span id="heroGrade"></span> · <span id="heroRoute">路线未定</span></div>
+    <div style="margin-top:7px;display:flex;gap:6px;align-items:center">
+      <span style="font-size:11px;color:var(--muted)">学生档案</span>
+      <select id="profileSel" style="width:auto;padding:3px 8px;font-size:12px"></select>
+      <button class="btn" id="profileAdd" style="font-size:11px;padding:3px 10px">＋ 新档案</button>
+    </div>
   </div>
   <div class="countdown"><div class="n" id="cdDays">—</div><div class="l" id="cdLabel"></div></div>
 </div>
@@ -363,6 +371,7 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
   <div class="btnrow">
     <button class="btn primary" id="runBtn">生成规划 →</button>
     <button class="btn" id="demoBtn">示例数据</button>
+    <button class="btn" id="shareBtn">🔗 复制分享链接</button>
   </div>
 </div>
 
@@ -370,8 +379,9 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
 <div id="results">
 
   <div id="printHeader" style="display:none;text-align:center;margin-bottom:18px">
-    <div style="font-size:20px;font-weight:800">个人学业诊断与路线图</div>
+    <div style="font-size:20px;font-weight:800">个人学业诊断与路线图 <span style="font-weight:600;font-size:13px;color:var(--muted)">Academic Diagnosis & Roadmap</span></div>
     <div style="font-size:12px;color:var(--muted)" id="printMeta"></div>
+    <div id="printEnSum" style="font-size:11px;color:var(--ink-2);margin-top:4px"></div>
   </div>
 
   <!-- AI 路线确立卡片 -->
@@ -437,6 +447,13 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
     <div class="bar-legend" id="barLegend"></div>
   </div>
 
+  <!-- 成长曲线 -->
+  <div class="card" id="histCard" style="display:none">
+    <h2>📈 成长曲线 Growth Track<span style="font-weight:400;font-size:12px;color:var(--muted)">（每次手动生成规划自动存档，按天去重）</span></h2>
+    <svg id="histChart" width="100%" height="150" viewBox="0 0 640 150" preserveAspectRatio="none"></svg>
+    <div class="bar-legend" id="histLegend"></div>
+  </div>
+
   <!-- 顾问总评 -->
   <div class="card">
     <h2 style="display:flex;align-items:center">📋 顾问总评与交叉预警
@@ -464,35 +481,35 @@ pre.json{background:var(--page);border:1px solid var(--border);border-radius:10p
   </details>
 </div>
 
+<div class="hint" style="text-align:center;margin-top:14px">门槛与赛历数据核查于 <b id="dataVer"></b> · 概率为规划参考模型输出，不构成录取承诺</div>
+
 </div>
 <div class="tooltip" id="tooltip"></div>
 
+<script src="data.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
 const r1=v=>Math.round(v);
-const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+/* 多档案：activeProfile 命名空间隔离（"默认" 档案沿用旧键，历史数据无缝迁移） */
+const RAW_KEYS=new Set(["profiles","activeProfile"]);
+const PROFILE=localStorage.getItem("activeProfile")||"默认";
+const PK=k=>RAW_KEYS.has(k)||PROFILE==="默认"?k:`${k}::${PROFILE}`;
+const LS={get(k,d){try{const v=localStorage.getItem(PK(k));return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(PK(k),JSON.stringify(v));}catch(e){}}};
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ROUTE_COLOR={"A-Level":"--s1","IB":"--s2","AP":"--s6"};
+/* 分享链接导入：#d=base64(JSON{inputs,targetUnis}) → 写入当前档案后清除 hash */
+try{
+  if(location.hash.startsWith("#d=")){
+    const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
+    if(p&&p.inputs) LS.set("inputs",p.inputs);
+    if(Array.isArray(p.targetUnis)) LS.set("targetUnis",p.targetUnis);
+    history.replaceState(null,"",location.pathname+location.search);
+  }
+}catch(e){}
 
-/* ---------- 目标大学库 ---------- */
-const UNIS=[
-  {id:"hku",  name:"香港大学 HKU",       region:"hk", rank:"QS 17 · Non-JUPAS 内卷", al:"A*AA – A*A*A", ib:"36 – 42（热门 38+）", ap:"GPA 3.8+ / 5门AP 4-5分", req:88, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80（法·医更高）"},
-  {id:"cuhk", name:"香港中文大学 CUHK",  region:"hk", rank:"QS 32 · Non-JUPAS", al:"A*AA",       ib:"36 – 40", ap:"GPA 3.7+ / 4门AP 4+",   req:86, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80"},
-  {id:"hkust",name:"香港科技大学 HKUST", region:"hk", rank:"QS 44", al:"AAA – A*AA",  ib:"34 – 38", ap:"GPA 3.6+ / 4门AP 4+",   req:84, engReq:70, engLabel:"IELTS 6.0 / TOEFL 80"},
-  {id:"imperial",name:"帝国理工 Imperial",region:"uk",rank:"QS 2 · 仅 STEM+商科",  al:"A*A*A（区间 AAA–A*A*A*）",ib:"38 – 42（多为 40+）", ap:"3-4门 AP 5分（不收 SAT）",  req:92, excl:["hum","art"], engReq:85, engLabel:"IELTS 6.5-7.0 / TOEFL 92-100"},
-  {id:"oxford",  name:"牛津大学 Oxford",  region:"uk",rank:"QS 3",  al:"AAA – A*A*A（按专业）",ib:"38 – 40（HL 766/776）", ap:"5门+ AP 5分 + SAT 1550",  req:93, engReq:90, engLabel:"IELTS 7.0-7.5 / TOEFL 100-110"},
-  {id:"cambridge",name:"剑桥大学 Cambridge",region:"uk",rank:"QS 5",al:"A*AA – A*A*A",ib:"40 – 42（HL 776）", ap:"5门+ AP 5分 + SAT 1550",  req:94, engReq:90, engLabel:"IELTS 7.5（单项 7.0）/ TOEFL 110"},
-  {id:"ucl",  name:"伦敦大学学院 UCL",   region:"uk", rank:"QS 9",  al:"A*A*A – ABB（多为 A*AA）", ib:"34 – 38", ap:"4-5门AP 4-5分",         req:88, engReq:85, engLabel:"IELTS 6.5-7.5（按专业分级）"},
-  {id:"ivy",  name:"常春藤盟校 Ivy League", region:"us", rank:"哈佛/耶鲁/普林斯顿等 8 校", al:"A*A*A* + 顶级背景", ib:"42 – 45", ap:"GPA 4.0 / 8门AP 5分 / SAT 1550+", req:95, engReq:85, engLabel:"TOEFL 100+（录取者典型 110+）"},
-  {id:"us30", name:"美国 Top 30（综合）", region:"us", rank:"US News Top 30", al:"—", ib:"预估 40+", ap:"GPA 3.9+ / 5-8门AP 5分 / SAT 1500+", req:90, engReq:85, engLabel:"TOEFL 100+"},
-  {id:"toronto",name:"多伦多大学 Toronto", region:"ca", rank:"QS 25", al:"AAA – AAB", ib:"33 – 40", ap:"GPA 3.8+ / 3-4门AP 4+", req:85, engReq:78, engLabel:"IELTS 6.5 / TOEFL 100（写作 22）"},
-  {id:"mcgill", name:"麦吉尔大学 McGill",  region:"ca", rank:"QS 27", al:"AAB",       ib:"34 – 38", ap:"GPA 3.8+ / AP 4+",      req:84, engReq:78, engLabel:"IELTS 6.5 / TOEFL 90-100"},
-  {id:"melbourne",name:"墨尔本大学 Melbourne",region:"au",rank:"QS 13",al:"AAB – AAA",ib:"36 – 40（热门专业）",ap:"3-4门AP 4+ / SAT 1350+",req:84, engReq:78, engLabel:"IELTS 6.5（部分专业写作 7.0）"},
-  {id:"sydney",  name:"悉尼大学 Sydney",     region:"au",rank:"QS 18",al:"ABB – AAB", ib:"33 – 38", ap:"3门AP 4+ / SAT 1300+", req:82, engReq:78, engLabel:"IELTS 6.5"},
-];
 const REGION_LABEL={hk:"🇭🇰 香港（Non-JUPAS）",uk:"🇬🇧 英国（UCAS）",us:"🇺🇸 美国（Common App）",ca:"🇨🇦 加拿大（OUAC）",au:"🇦🇺 澳大利亚（直申 / ATAR 换算）"};
 /* 多校联申：最多 5 所；主对标校 = 所选中门槛最高者 */
 let targetUnis = LS.get("targetUnis",null) || [LS.get("targetUni","hku")];
@@ -704,49 +721,7 @@ function renderSubjectInputs(){
     for(const [id,v] of Object.entries(saved.courseState[sys])) if($(id)) $(id).value=v;
   }
 }
-/* ---------- 软实力：竞赛金字塔数据库（按专业方向 · Tier 1 国际顶级 → Tier 4 校内参与，附真实赛历） ---------- */
-const COMP_DB=[
-  /* 商科 / 经济 */
-  {id:"nec_f", cat:"bus", t:1, core:1, n:"NEC 全美经济学挑战赛（中国站决赛 / 全球站）", m:"12 月区域站 → 3 月中国站 → 5 月全球站"},
-  {id:"ieo",   cat:"bus", t:1, n:"IEO 国际经济学奥林匹克（国家队 / 国际赛）", m:"春季国内选拔 → 7 月国际赛"},
-  {id:"ja",    cat:"bus", t:2, hk:1, n:"JA Company Program 香港青年成就计划", m:"9 月组队 → 次年 4 月路演"},
-  {id:"hksec", cat:"bus", t:2, hk:1, n:"HKSEC 香港社会企业挑战赛", m:"全年赛季 · 春季决赛"},
-  {id:"sic",   cat:"bus", t:2, core:1, n:"SIC 中学生投资挑战赛（全国奖）", m:"9 月 – 次年 4 月赛季"},
-  {id:"kwhs",  cat:"bus", t:2, n:"沃顿全球投资挑战 WGHS（原 KWHS）", m:"9 – 12 月比赛季"},
-  {id:"fbla",  cat:"bus", t:2, n:"FBLA 美国未来商业领袖挑战（全国奖）", m:"12 月初选 → 次年 4 月全国"},
-  {id:"biz_s", cat:"bus", t:3, n:"校级商赛 / 商业社团项目", m:"全年"},
-  /* 工程 / CS */
-  {id:"usamo", cat:"stem",t:1, n:"USAMO 美国数学奥林匹克（AIME 晋级后）", m:"11 月 AMC → 2 月 AIME → 3 月 USAMO"},
-  {id:"bpho_g",cat:"stem",t:1, n:"BPhO 英国物理奥赛 Top Gold（超金）", m:"11 月 Round 1"},
-  {id:"usaco_g",cat:"stem",t:1,n:"USACO 美国信息学奥赛（金组 / 铂金）", m:"12 – 2 月月赛升组 + 3 月公开赛"},
-  {id:"aime",  cat:"stem",t:2, core:1, n:"AMC12 前 5% → AIME 晋级（美国数学竞赛）", m:"11 月 AMC → 次年 2 月 AIME"},
-  {id:"yau",   cat:"stem",t:2, n:"丘成桐中学科学奖（入围以上）", m:"4 月报名 → 12 月总决赛"},
-  {id:"hkmo",  cat:"stem",t:2, hk:1, n:"HKMO 香港数学竞赛（决赛级）", m:"春季"},
-  {id:"hkoi",  cat:"stem",t:2, hk:1, n:"HKOI 香港信息学奥赛", m:"11 月初赛 → 2 月决赛"},
-  {id:"hkysic",cat:"stem",t:2, hk:1, n:"HKYSIC 香港青少年科技创新大赛", m:"9 月申报 → 3 月终审"},
-  {id:"euclid",cat:"stem",t:3, core:1, n:"Euclid 欧几里得数学竞赛（滑铁卢）", m:"4 月"},
-  {id:"pbowl", cat:"stem",t:3, n:"Physics Bowl 物理碗", m:"3 月下旬"},
-  {id:"stem_s",cat:"stem",t:4, n:"校级数学 / 科学竞赛 · STEM 社团", m:"全年"},
-  /* 理科 / 生化 */
-  {id:"isef",  cat:"sci", t:1, n:"ISEF 国际科学与工程大奖赛（决赛入围）", m:"秋冬附属赛 → 5 月全球总决赛"},
-  {id:"igem",  cat:"sci", t:1, n:"iGEM 国际基因工程机器大赛（金牌）", m:"春季组队 → 10 月总决赛"},
-  {id:"bbo",   cat:"sci", t:2, core:1, n:"BBO 英国生物奥赛（金 / 银）", m:"4 月"},
-  {id:"usabo", cat:"sci", t:2, n:"USABO 美国生物奥赛（半决赛以上）", m:"2 月公开赛 → 3 月半决赛"},
-  {id:"ukcho", cat:"sci", t:2, n:"UKChO 英国化学奥赛（金 / 银）", m:"1 月"},
-  {id:"bbee",  cat:"sci", t:2, n:"Brain Bee 脑科学大赛（全国奖）", m:"1 – 3 月"},
-  {id:"sci_s", cat:"sci", t:3, n:"校内实验项目 / 科学展", m:"全年"},
-  /* 人文 / 社科 */
-  {id:"jlocke",cat:"hum", t:1, core:1, n:"John Locke 论文竞赛（Shortlist / 获奖）", m:"4 月报名 → 6 月底提交"},
-  {id:"concord",cat:"hum",t:1, n:"Concord Review 历史论文（发表）", m:"季刊制 · 全年投稿"},
-  {id:"marshall",cat:"hum",t:2, n:"剑桥 Marshall Society 经济论文赛", m:"暑期截稿"},
-  {id:"nyt",   cat:"hum", t:2, n:"纽约时报 NYT 中学生写作 / 社论竞赛", m:"分赛道全年滚动"},
-  {id:"nhd",   cat:"hum", t:2, n:"NHD 美国国家历史日（全国赛）", m:"校 / 区赛 → 6 月全国"},
-  {id:"hkssdc",cat:"hum", t:2, hk:1, n:"HKSSDC 香港英文辩论赛", m:"10 月 – 次年 3 月赛季"},
-  {id:"hkmun", cat:"hum", t:2, hk:1, n:"HKMUN 香港模联", m:"3 月会期"},
-  {id:"mun",   cat:"hum", t:2, n:"哈佛 / 耶鲁模联（最佳代表）", m:"1 – 3 月会期"},
-  {id:"schol", cat:"hum", t:2, n:"Scholastic 学术艺术与写作奖（金 / 银钥匙）", m:"12 月截稿"},
-  {id:"hum_s", cat:"hum", t:3, n:"校级辩论 / 模联 / 校刊", m:"全年"},
-];
+/* 竞赛金字塔数据库 COMP_DB 已外置至 data.js（每年赛历核查只改数据文件） */
 const COMP_BY_ID=Object.fromEntries(COMP_DB.map(c=>[c.id,c]));
 const CAT_OF={eng:"stem",cs:"stem",bus:"bus",med:"sci",hum:"hum",art:"hum",undecided:null};
 /* 科研/产出金字塔：探究项目术语随课程体系适配（IB=EE/IA · A-Level=EPQ · AP=AP Research） */
@@ -1039,7 +1014,7 @@ function analyze(inp,uni){
     }
   }
   if(gpa4!=null&&gpaWeighted==null&&inp.rigor==="challenge"){ gpaWeighted=Math.min(gpa4+0.35,4.3); gpaNote+=`；挑战级课程加权后 ≈${gpaWeighted.toFixed(2)}`; }
-  if(inp.sys==="myp"&&ibEst45!=null) gpaNote+=(gpaNote?"；":"")+`预估 DP 总分 ≈${ibEst45}/45（6 科 ${r1(ibEst45-ibCore)}/42 + EE/TOK 核心 ${ibCore} 分）`;
+  if(inp.sys==="myp"&&ibEst45!=null) gpaNote+=(gpaNote?"；":"")+`预估 DP 总分 ≈${ibEst45}/45（6 科 ${r1(ibEst45-ibCore)}/42 + EE/TOK 核心 ${ibCore} 分，置信区间 ±2）`;
   /* A-Level 预估等级匹配区间（Predicted Grade Band） */
   let alPg=null;
   if(inp.sys==="igcse"&&present.length){
@@ -1321,10 +1296,7 @@ function analyze(inp,uni){
     au:[[0.70,10],[0.80,28],[0.90,50],[1.00,65],[1.08,72]],
   };
   let probPct=r1(clamp(interp(PROB_CURVE[uni.region]||PROB_CURVE.uk,ratio),2,uni.region==="us"?25:85));
-  /* 港三所 Non-JUPAS：学术硬指标 Cut-off 驱动，门槛梯度拉开（HKU 最难）——过线才跃升 60-75%（面试决胜），未过线走保守曲线 */
-  const HK_CUT={hku:{ib:39,al:92,apN:4,gpa:3.9,band:"IB≥39 / A*A*A / AP 4门5分+GPA3.9"},
-                cuhk:{ib:38,al:89,apN:4,gpa:3.85,band:"IB≥38 / A*AA / AP 4门5分+GPA3.85"},
-                hkust:{ib:37,al:87,apN:3,gpa:3.8,band:"IB≥37 / AAA / AP 3门5分+GPA3.8"}};
+  /* 港三所 Non-JUPAS：学术硬指标 Cut-off 驱动（HK_CUT 已外置至 data.js）——过线才跃升 60-75%（面试决胜），未过线走保守曲线 */
   const hc=HK_CUT[uni.id];
   const hkCut = !!hc && (
     (inp.sys==="myp"&&ibEst45!=null&&ibEst45>=hc.ib) ||
@@ -1343,9 +1315,11 @@ function analyze(inp,uni){
     : engLow
     ? `⚠️ 语言未达该校线（${uni.engLabel}）——英联邦体系 offer 将附带语言条件，入学前须达标（概率暂封顶 35%）`
     : hkCut
-    ? `${uni.name.split(" ")[0]} Non-JUPAS 采用【硬指标过线 + 组面（Group Interview）决胜】机制：当前学术分已踏穿该校门槛线（${hc.band}），软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材`
+    ? `${uni.name.split(" ")[0]} Non-JUPAS 采用【硬指标过线 + 面试决胜（HKU 组面 / 中大科大个面·材料审核）】机制：当前学术分已踏穿该校门槛线（${hc.band}），软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材`
     : hc
-    ? `港三所为 Cut-off 驱动型：当前预估分未稳过 ${uni.name.split(" ")[0]}门槛线（${hc.band}）——概率处于观望区，冲进门槛带后将跃升至 60-75%`
+    ? (eG>=10
+      ? `港三所为 Cut-off 驱动型：当前预估分未稳过 ${uni.name.split(" ")[0]}门槛线（${hc.band}）——概率处于观望区，冲进门槛带后将跃升至 60-75%`
+      : `目标 ${uni.name.split(" ")[0]} 为 Cut-off 驱动型（门槛带 ${hc.band}）——当前处于地基构筑期，概率随里程碑与未来预估分动态上修`)
     : uni.region==="us"
     ? "美本为 Holistic Review 综合评估：学术达标仅为入场券（概率硬性封顶 25%），文书与独特性软背景决定上限（学术 40% + 软实力 60% 权重模型）"
     : probPct>=55?"英港体系看重学术硬指标——达标度高即高概率区间"
@@ -1626,7 +1600,7 @@ function trackNodes(track,a,inp){
   T.p3=[...T.p3,...CAL.p3]; T.p4=[...T.p4,...CAL.p4];
   /* HKU Non-JUPAS 节奏：递交后组面冲刺 → Conditional Offer → 补交预估分 */
   if(uni.region==="hk"){
-    T.p5=[...T.p5,"12–2 月 港大组面（Group Interview）冲刺准备：时事+专业动机+小组协作模拟"];
+    T.p5=[...T.p5,"12–2 月 港校面试冲刺（HKU 组面 / 中大科大个面）：时事+专业动机+小组协作模拟"];
     T.p6=["1–3 月 Conditional Offer 接收 → 补交预估分，大考出分后换 Firm Offer",...T.p6];
   }
   /* 高年级入口的暑假任务（e<=9 时用 T.p0） */
@@ -1714,6 +1688,59 @@ function trackJSON(track,a,inp){
   ];
 }
 
+/* ---------- 档案切换 / 分享链接 / 数据版本 ---------- */
+$("dataVer").textContent=DATA_VERSION;
+(function(){
+  let profs=[];try{profs=JSON.parse(localStorage.getItem("profiles"))||[];}catch(e){}
+  if(!profs.includes("默认")) profs.unshift("默认");
+  if(!profs.includes(PROFILE)) profs.push(PROFILE);
+  localStorage.setItem("profiles",JSON.stringify(profs));
+  $("profileSel").innerHTML=profs.map(p=>`<option${p===PROFILE?" selected":""}>${p}</option>`).join("");
+  $("profileSel").addEventListener("change",()=>{localStorage.setItem("activeProfile",$("profileSel").value);location.reload();});
+  $("profileAdd").addEventListener("click",()=>{
+    const n=(prompt("新档案名称（如：老二 · G7）")||"").trim();
+    if(!n||n===PROFILE) return;
+    if(!profs.includes(n)){profs.push(n);localStorage.setItem("profiles",JSON.stringify(profs));}
+    localStorage.setItem("activeProfile",n);location.reload();
+  });
+})();
+$("shareBtn").addEventListener("click",()=>{
+  saveInputs();
+  const payload={inputs:LS.get("inputs",{}),targetUnis};
+  const url=location.origin+location.pathname+"#d="+btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const done=()=>alert("分享链接已复制——发给顾问 / 家人，打开即还原当前档案（含选校与全部输入）");
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>prompt("手动复制此链接：",url));
+  else prompt("手动复制此链接：",url);
+});
+
+/* ---------- 成长曲线（按天存档，档案隔离） ---------- */
+function saveHistory(a){
+  const h=LS.get("history",[]);
+  const day=new Date().toISOString().slice(0,10);
+  const snap={d:day,overall:a.overall,prob:parseInt(a.prob.replace(/[^\d]/g,""))||0,readiness:a.readiness};
+  if(h.length&&h[h.length-1].d===day) h[h.length-1]=snap; else h.push(snap);
+  LS.set("history",h.slice(-60));
+}
+function renderHistory(){
+  const h=LS.get("history",[]);
+  if(h.length<2){ $("histCard").style.display="none"; return; }
+  $("histCard").style.display="";
+  const svg=$("histChart"); svg.innerHTML="";
+  const W=640,H=150,P=26;
+  const xs=i=>P+(W-2*P)*(i/(h.length-1));
+  const ys=v=>H-P-(H-2*P-14)*(v/100);
+  [0,50,100].forEach(v=>svg.appendChild(mk("line",{x1:P,y1:ys(v),x2:W-P,y2:ys(v),stroke:css("--grid"),"stroke-width":1})));
+  const line=(key,cvar)=>{
+    svg.appendChild(mk("polyline",{points:h.map((s,i)=>`${xs(i)},${ys(s[key])}`).join(" "),fill:"none",stroke:css(cvar),"stroke-width":2.5,"stroke-linejoin":"round"}));
+    h.forEach((s,i)=>svg.appendChild(mk("circle",{cx:xs(i),cy:ys(s[key]),r:3,fill:css(cvar)})));
+  };
+  line("overall","--s1"); line("prob","--s2");
+  const t1=mk("text",{x:P,y:H-6,"font-size":10,fill:css("--muted")}); t1.textContent=h[0].d; svg.appendChild(t1);
+  const t2=mk("text",{x:W-P,y:H-6,"font-size":10,fill:css("--muted"),"text-anchor":"end"}); t2.textContent=h[h.length-1].d; svg.appendChild(t2);
+  const sw=c=>`<span style="width:9px;height:9px;border-radius:3px;display:inline-block;background:${css(c)};margin-right:5px"></span>`;
+  $("histLegend").innerHTML=`<span style="margin-right:14px">${sw("--s1")}综合潜力指数</span><span style="margin-right:14px">${sw("--s2")}主对标校录取概率 %</span><span>共 ${h.length} 次评估存档</span>`;
+}
+
 /* ---------- 主流程 ---------- */
 function run(scroll=true){
   const inp=readInput();
@@ -1779,7 +1806,7 @@ function run(scroll=true){
   if(a.current[2]<60) acts.push("写作：完成 1 篇 800 字带 APA 引用的迷你研究报告");
   if(acts.length<3) acts.push(`竞赛：报名 ${C.comp[0]}，启动第一轮真题训练`);
   if(acts.length<3) acts.push("阅读：启动每月 1 本英文非虚构原著 + 读书报告打卡");
-  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}${targetUni.region==="hk"?(a.hkuCutoff?`${targetUni.name.split(" ")[0]} Non-JUPAS 采用「硬指标过线 + 组面决胜」机制——当前学术分已踏穿该校门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材。`:"港三所为 Cut-off 驱动型——当前预估分未稳过门槛线，第一优先级是把预估分推进门槛带，届时概率将跃升至 60-75%。"):""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
+  const advisor=`该生综合潜力指数 ${a.overall}/100（${a.level}），学术画像「${a.acadType}」。${a.gpa4!=null?`GPA 引擎：${a.gpaNote}，走势${a.trendLabel}。`:""}对标${targetUni.name.split(" ")[0]}（${targetUni.rank}）达标度 ${a.readiness}%、录取概率 ${a.prob}。${targetUni.region==="us"?"美本为 Holistic Review 综合评估——学术达标仅为入场券，文书与独特性软背景决定上限。":""}${targetUni.region==="hk"?(a.hkuCutoff?`${targetUni.name.split(" ")[0]} Non-JUPAS 采用「硬指标过线 + 面试决胜」机制——当前学术分已踏穿该校门槛线，软实力与竞赛将作为面试话题与 PS 文书的核心决胜素材。`:(GRADE_NUM[inp.grade]||9)>=10?"港三所为 Cut-off 驱动型——当前预估分未稳过门槛线，第一优先级是把预估分推进门槛带，届时概率将跃升至 60-75%。":"港三所为 Cut-off 驱动型——地基期先按里程碑推进，进入 G10 后以预估分冲击门槛带（届时概率将跃升至 60-75%）。"):""}路线判定：${a.route}（置信度 ${a.confidence}/100，备选 ${a.alt}）——${a.reason} 意向专业「${MAJORS[mk]}」的三轨选科组合与竞赛线已匹配（见上卡），建议先执行下方 90 天清单再复评一次。`;
   $("alertList").innerHTML=a.alerts.length
     ? a.alerts.map(x=>{const i=x.indexOf("】");return `<li><b>${x.slice(0,i+1)}</b>${x.slice(i+1)}</li>`;}).join("")
     : `<li style="border-color:var(--s2);background:color-mix(in srgb,var(--s2) 6%,transparent)"><b style="color:var(--good-text)">【交叉校验通过】</b>GPA、语言、选科三项匹配度未触发风险规则</li>`;
@@ -1796,7 +1823,10 @@ function run(scroll=true){
   $("levelLine").textContent=`综合定位：${a.level}（指数 ${a.overall}/100）· 学术画像：${a.acadType}`;
   $("gpaLine").textContent = a.gpa4!=null ? `⚙ GPA 引擎：${a.gpaNote}｜走势：${a.trendLabel}` : "⚙ GPA 引擎：未提供 GPA / 成绩数据，建议补录以启用双引擎评估";
   $("alPgLine").textContent = a.alPg ? `🎯 预估 A-Level 匹配区间：${a.alPg}` : "";
-  $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ ${a.dualTrack?`推荐路线：${a.route} / ${a.alt} 双轨观察`:`推荐路线：${a.route}`} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")}`;
+  $("printMeta").textContent=`目标：${targetUni.name}（${targetUni.rank}）｜ ${GRADE_LABEL[inp.grade]} ｜ ${a.dualTrack?`推荐路线：${a.route} / ${a.alt} 双轨观察`:`推荐路线：${a.route}`} ｜ 生成日期：${new Date().toLocaleDateString("zh-CN")} ｜ 数据版本 ${DATA_VERSION}`;
+  $("printEnSum").textContent=`English Summary — Track: ${a.route}${a.dualTrack?" / "+a.alt+" (dual-track watch)":""} · Confidence ${a.confidence}/100 · Primary target: ${targetUni.name.split(" ").slice(1).join(" ")||targetUni.name}${targetUnis.length>1?` (+${targetUnis.length-1} schools)`:""} · Readiness ${a.readiness}% · Est. probability ${a.prob} · Overall index ${a.overall}/100 · Data ver. ${DATA_VERSION}`;
+  if(scroll) saveHistory(a);
+  renderHistory();
   drawBars(inp,targetUni,a.reqEff);
   /* 各校录取概率：每所选中的目标校一行概率条 */
   const selU=UNIS.filter(u=>targetUnis.includes(u.id)).sort((x,y)=>y.req-x.req);
